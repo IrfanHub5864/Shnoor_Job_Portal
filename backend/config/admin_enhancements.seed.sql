@@ -21,7 +21,8 @@ VALUES
   (9, 'James Taylor', 'james.taylor@hirehub.com', '$2a$10$u5fy9pSfSrmpywXZoWBohuReJJU65k68pjo0NdQdioVUxx0oHlJXy', 'admin', FALSE, '2026-01-22 08:00:00', '2026-01-22 08:00:00'),
   (10, 'Isabella Moore', 'isabella.moore@hirehub.com', '$2a$10$u5fy9pSfSrmpywXZoWBohuReJJU65k68pjo0NdQdioVUxx0oHlJXy', 'admin', FALSE, '2026-02-04 08:00:00', '2026-02-04 08:00:00'),
   (11, 'Benjamin Clark', 'benjamin.clark@hirehub.com', '$2a$10$u5fy9pSfSrmpywXZoWBohuReJJU65k68pjo0NdQdioVUxx0oHlJXy', 'admin', TRUE, '2026-02-19 08:00:00', '2026-02-19 08:00:00'),
-  (12, 'Charlotte Lewis', 'charlotte.lewis@hirehub.com', '$2a$10$u5fy9pSfSrmpywXZoWBohuReJJU65k68pjo0NdQdioVUxx0oHlJXy', 'admin', FALSE, '2026-03-05 08:00:00', '2026-03-05 08:00:00')
+  (12, 'Charlotte Lewis', 'charlotte.lewis@hirehub.com', '$2a$10$u5fy9pSfSrmpywXZoWBohuReJJU65k68pjo0NdQdioVUxx0oHlJXy', 'admin', FALSE, '2026-03-05 08:00:00', '2026-03-05 08:00:00'),
+  (13, 'Portal Manager', 'manager@hirehub.com', '$2b$10$tjv/DCqxM6Hc4gCxymyOyOyqlYKPyvGVTiy8R/x7o4BvjCd1AMyju', 'manager', FALSE, '2026-03-12 08:00:00', '2026-03-12 08:00:00')
 ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO jobs (id, company_id, title, description, salary_min, salary_max, location, status, created_at, updated_at)
@@ -70,6 +71,17 @@ VALUES
   (2, 'Rejected Company', 'company', 4, '2026-04-01 09:15:00'),
   (3, 'Blocked User', 'user', 4, '2026-04-01 09:30:00'),
   (4, 'Deleted Job', 'job', 6, '2026-04-01 09:45:00')
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO manager_test_links (id, application_id, job_id, candidate_email, link_url, notes, link_status, created_by, updated_by, created_at, updated_at)
+VALUES
+  (1, 9, 7, 'james.taylor@hirehub.com', 'https://tests.hirehub.com/manager/qa-001', 'QA assessment for automation role', 'sent', 13, 13, '2026-03-21 10:00:00', '2026-03-21 10:00:00'),
+  (2, 13, 9, 'ava.patel@hirehub.com', 'https://tests.hirehub.com/manager/fe-002', 'Frontend challenge for shortlisted applicant', 'completed', 13, 13, '2026-03-24 09:30:00', '2026-03-25 12:00:00')
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO manager_test_link_updates (id, test_link_id, changed_by, previous_status, new_status, previous_link, new_link, previous_notes, new_notes, updated_at)
+VALUES
+  (1, 2, 13, 'sent', 'completed', 'https://tests.hirehub.com/manager/fe-002', 'https://tests.hirehub.com/manager/fe-002', 'Frontend challenge for shortlisted applicant', 'Candidate completed and submitted solution', '2026-03-25 12:00:00')
 ON CONFLICT (id) DO NOTHING;
 
 COMMIT;

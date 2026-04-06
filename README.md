@@ -120,6 +120,8 @@ After running seed data:
 - **Email**: admin@hirehub.com
 - **Password**: admin123
 - **OTP**: Check server console (6-digit code)
+- **Manager Email**: manager@hirehub.com
+- **Manager Password**: Manager12
 
 ## 📋 Database Schema
 

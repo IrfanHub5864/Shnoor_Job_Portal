@@ -12,6 +12,7 @@ const applicationRoutes = require('./routes/applicationRoutes');
 const subscriptionRoutes = require('./routes/subscriptionRoutes');
 const dashboardRoutes = require('./routes/dashboardRoutes');
 const logRoutes = require('./routes/logRoutes');
+const managerRoutes = require('./routes/managerRoutes');
 
 // Import middleware
 const errorHandler = require('./middleware/errorHandler');
@@ -38,6 +39,7 @@ app.use('/api/applications', applicationRoutes);
 app.use('/api/subscriptions', subscriptionRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/logs', logRoutes);
+app.use('/api/manager', managerRoutes);
 
 // 404 Handler
 app.use((req, res) => {

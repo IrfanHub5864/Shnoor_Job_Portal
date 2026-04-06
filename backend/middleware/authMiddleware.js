@@ -1,37 +1,47 @@
 const jwt = require('jsonwebtoken');
 
+const getUserFromToken = (req) => {
+  const token = req.headers.authorization?.split(' ')[1];
+  if (!token) {
+    throw new Error('NO_TOKEN');
+  }
+
+  return jwt.verify(token, process.env.JWT_SECRET);
+};
+
 const authenticate = (req, res, next) => {
   try {
-    const token = req.headers.authorization?.split(' ')[1];
-    if (!token) {
-      return res.status(401).json({ message: 'No token provided' });
-    }
-
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = decoded;
+    req.user = getUserFromToken(req);
     next();
   } catch (error) {
+    if (error.message === 'NO_TOKEN') {
+      return res.status(401).json({ message: 'No token provided' });
+    }
     res.status(401).json({ message: 'Invalid token', error: error.message });
   }
 };
 
-const authenticateAdmin = (req, res, next) => {
+const authenticateRoles = (...roles) => (req, res, next) => {
   try {
-    const token = req.headers.authorization?.split(' ')[1];
-    if (!token) {
-      return res.status(401).json({ message: 'No token provided' });
-    }
-
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    if (!['admin', 'superadmin'].includes(decoded.role)) {
-      return res.status(403).json({ message: 'Access denied. Admin only.' });
+    const decoded = getUserFromToken(req);
+    if (!roles.includes(decoded.role)) {
+      return res.status(403).json({ message: 'Access denied.' });
     }
 
     req.user = decoded;
     next();
   } catch (error) {
+    if (error.message === 'NO_TOKEN') {
+      return res.status(401).json({ message: 'No token provided' });
+    }
     res.status(401).json({ message: 'Invalid token', error: error.message });
   }
 };
 
-module.exports = { authenticate, authenticateAdmin };
+const authenticateAdmin = authenticateRoles('admin', 'superadmin');
+
+module.exports = {
+  authenticate,
+  authenticateAdmin,
+  authenticateRoles
+};

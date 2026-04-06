@@ -16,9 +16,17 @@ import Subscriptions from './pages/Subscriptions';
 import Logs from './pages/Logs';
 import CompanyDetails from './pages/CompanyDetails';
 import Settings from './pages/Settings';
+import ManagerDashboard from './pages/ManagerDashboard';
 
-const ProtectedRoute = ({ children }) => {
-  const { token, loading } = useAuth();
+const getDefaultDashboardPath = (role) => {
+  if (role === 'manager') {
+    return '/manager/dashboard';
+  }
+  return '/admin/dashboard';
+};
+
+const ProtectedRoute = ({ children, allowedRoles }) => {
+  const { token, loading, user } = useAuth();
 
   if (loading) {
     return (
@@ -40,11 +48,19 @@ const ProtectedRoute = ({ children }) => {
     );
   }
 
-  return token ? children : <Navigate to="/" replace />;
+  if (!token) {
+    return <Navigate to="/" replace />;
+  }
+
+  if (allowedRoles && user && !allowedRoles.includes(user.role)) {
+    return <Navigate to={getDefaultDashboardPath(user.role)} replace />;
+  }
+
+  return children;
 };
 
 const AppContent = () => {
-  const { token } = useAuth();
+  const { token, user } = useAuth();
 
   return (
     <Routes>
@@ -52,12 +68,20 @@ const AppContent = () => {
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
       <Route path="/verify-otp" element={<OTPVerificationPage />} />
+      <Route
+        path="/dashboard"
+        element={
+          token && user
+            ? <Navigate to={getDefaultDashboardPath(user.role)} replace />
+            : <Navigate to="/login" replace />
+        }
+      />
 
       {/* Admin Routes */}
       <Route
         path="/admin/dashboard"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute allowedRoles={['admin', 'superadmin']}>
             <Dashboard />
           </ProtectedRoute>
         }
@@ -65,7 +89,7 @@ const AppContent = () => {
       <Route
         path="/admin/companies"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute allowedRoles={['admin', 'superadmin']}>
             <Companies />
           </ProtectedRoute>
         }
@@ -73,7 +97,7 @@ const AppContent = () => {
       <Route
         path="/admin/company/:id"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute allowedRoles={['admin', 'superadmin']}>
             <CompanyDetails />
           </ProtectedRoute>
         }
@@ -81,7 +105,7 @@ const AppContent = () => {
       <Route
         path="/admin/users"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute allowedRoles={['admin', 'superadmin']}>
             <Users />
           </ProtectedRoute>
         }
@@ -89,7 +113,7 @@ const AppContent = () => {
       <Route
         path="/admin/jobs"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute allowedRoles={['admin', 'superadmin']}>
             <Jobs />
           </ProtectedRoute>
         }
@@ -97,7 +121,7 @@ const AppContent = () => {
       <Route
         path="/admin/applications"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute allowedRoles={['admin', 'superadmin']}>
             <Applications />
           </ProtectedRoute>
         }
@@ -105,7 +129,7 @@ const AppContent = () => {
       <Route
         path="/admin/subscriptions"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute allowedRoles={['admin', 'superadmin']}>
             <Subscriptions />
           </ProtectedRoute>
         }
@@ -113,7 +137,7 @@ const AppContent = () => {
       <Route
         path="/admin/logs"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute allowedRoles={['admin', 'superadmin']}>
             <Logs />
           </ProtectedRoute>
         }
@@ -121,8 +145,18 @@ const AppContent = () => {
       <Route
         path="/admin/settings"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute allowedRoles={['admin', 'superadmin']}>
             <Settings />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* Manager Route */}
+      <Route
+        path="/manager/dashboard"
+        element={
+          <ProtectedRoute allowedRoles={['manager', 'admin', 'superadmin']}>
+            <ManagerDashboard />
           </ProtectedRoute>
         }
       />

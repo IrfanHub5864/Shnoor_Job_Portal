@@ -37,8 +37,12 @@ const OTPVerificationPage = () => {
     setLoading(true);
 
     try {
-      await verifyOTP(userId, otp);
-      navigate('/admin/dashboard');
+      const result = await verifyOTP(userId, otp);
+      if (result?.user?.role === 'manager') {
+        navigate('/manager/dashboard');
+      } else {
+        navigate('/admin/dashboard');
+      }
     } catch (err) {
       setError(err.response?.data?.message || 'OTP verification failed');
     } finally {
@@ -54,6 +58,7 @@ const OTPVerificationPage = () => {
         <p className={styles.subtitle}>
           Enter the 6-digit OTP sent to <strong>{email}</strong>
         </p>
+        <p className={styles.demoOtp}>Demo OTP: <strong>123456</strong></p>
 
         {error && <div className={styles.alert}>{error}</div>}
 
@@ -69,7 +74,7 @@ const OTPVerificationPage = () => {
               required
               className={styles.otpInput}
             />
-            <p className={styles.hint}>Check your email for the OTP code</p>
+            <p className={styles.hint}>Use the demo OTP shown above</p>
           </div>
 
           <button

@@ -8,7 +8,7 @@ ON CONFLICT DO NOTHING;
 
 -- Insert Admin User (password: 'admin123')
 INSERT INTO users (name, email, password, role)
-VALUES ('Super Admin', 'admin@hirehub.com', '$2a$10$Y0sH.XH9KGt8V9Z6ZrzM.O7ZI8NxJH9Z6C6V4R3D7Q8F8K6Y9E7Z6', 'admin')
+VALUES ('Super Admin', 'admin@hirehub.com', '$2b$10$Capc9Pa2mw7Ad4CG2qj1hOl2n7KkLKZxCiGypbWeRo/qNF.QFkpJm', 'admin')
 ON CONFLICT (email) DO NOTHING;
 
 -- Insert Sample Companies
@@ -25,7 +25,8 @@ INSERT INTO users (name, email, password, role)
 VALUES 
   ('John Developer', 'john@example.com', '$2a$10$Y0sH.XH9KGt8V9Z6ZrzM.O7ZI8NxJH9Z6C6V4R3D7Q8F8K6Y9E7Z6', 'admin'),
   ('Sarah Designer', 'sarah@example.com', '$2a$10$Y0sH.XH9KGt8V9Z6ZrzM.O7ZI8NxJH9Z6C6V4R3D7Q8F8K6Y9E7Z6', 'admin'),
-  ('Michael Manager', 'michael@example.com', '$2a$10$Y0sH.XH9KGt8V9Z6ZrzM.O7ZI8NxJH9Z6C6V4R3D7Q8F8K6Y9E7Z6', 'admin')
+  ('Michael Manager', 'michael@example.com', '$2a$10$Y0sH.XH9KGt8V9Z6ZrzM.O7ZI8NxJH9Z6C6V4R3D7Q8F8K6Y9E7Z6', 'admin'),
+  ('Portal Manager', 'manager@hirehub.com', '$2b$10$tjv/DCqxM6Hc4gCxymyOyOyqlYKPyvGVTiy8R/x7o4BvjCd1AMyju', 'manager')
 ON CONFLICT (email) DO NOTHING;
 
 -- Insert Sample Jobs
@@ -55,4 +56,11 @@ VALUES
   (2, 'Basic', 29.00, '2024-01-10', '2024-02-10', 'active'),
   (3, 'Enterprise', 199.00, '2024-01-01', '2024-04-01', 'active'),
   (4, 'Basic', 29.00, '2023-12-20', '2024-01-20', 'expired')
+ON CONFLICT DO NOTHING;
+
+-- Insert Manager Test Links
+INSERT INTO manager_test_links (application_id, job_id, candidate_email, link_url, notes, link_status, created_by, updated_by)
+VALUES
+  (1, 1, 'john@example.com', 'https://tests.hirehub.com/assessment/001', 'Initial coding assessment link', 'sent', 4, 4),
+  (2, 1, 'sarah@example.com', 'https://tests.hirehub.com/assessment/002', 'UI review assignment', 'completed', 4, 4)
 ON CONFLICT DO NOTHING;

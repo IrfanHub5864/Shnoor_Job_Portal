@@ -31,6 +31,12 @@ const LoginPage = () => {
     <div className={styles.container}>
       <div className={styles.formWrapper}>
         <h2 className={styles.title}>Login</h2>
+
+        <div className={styles.demoBox}>
+          <p><strong>Demo Credentials</strong></p>
+          <p>Admin: admin@hirehub.com / admin123</p>
+          <p>Manager: manager@hirehub.com / Manager12</p>
+        </div>
         
         {error && <div className={styles.alert}>{error}</div>}
 

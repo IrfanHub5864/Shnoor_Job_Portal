@@ -98,6 +98,17 @@ The server will start on `http://localhost:5000`
 ### Dashboard
 - `GET /api/dashboard/stats` - Get dashboard statistics
 
+### Manager
+- `GET /api/manager/profile` - Get manager profile
+- `GET /api/manager/users` - Get users for manager dashboard
+- `PUT /api/manager/users/:id/block-status` - Block/Unblock user
+- `GET /api/manager/jobs` - Get jobs for manager dashboard
+- `PUT /api/manager/jobs/:id/status` - Update job status
+- `GET /api/manager/test-links` - Get all test links
+- `POST /api/manager/test-links` - Create a test link
+- `PUT /api/manager/test-links/:id` - Update a test link
+- `GET /api/manager/test-link-updates` - Get test link update history
+
 ## 🔐 Authentication
 
 All protected endpoints require a JWT token in the Authorization header:

@@ -4,7 +4,7 @@ CREATE TABLE users (
   name VARCHAR(100) NOT NULL,
   email VARCHAR(100) UNIQUE NOT NULL,
   password VARCHAR(255) NOT NULL,
-  role VARCHAR(50) CHECK(role IN ('admin', 'superadmin')) DEFAULT 'admin',
+  role VARCHAR(50) CHECK(role IN ('admin', 'manager', 'superadmin')) DEFAULT 'admin',
   is_blocked BOOLEAN DEFAULT FALSE,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -74,13 +74,47 @@ CREATE TABLE admin_activity_logs (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE manager_test_links (
+  id SERIAL PRIMARY KEY,
+  application_id INTEGER REFERENCES applications(id) ON DELETE SET NULL,
+  job_id INTEGER REFERENCES jobs(id) ON DELETE SET NULL,
+  candidate_email VARCHAR(100),
+  link_url TEXT NOT NULL,
+  notes TEXT,
+  link_status VARCHAR(50) CHECK(link_status IN ('pending', 'sent', 'completed', 'expired')) DEFAULT 'pending',
+  created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  updated_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE manager_test_link_updates (
+  id SERIAL PRIMARY KEY,
+  test_link_id INTEGER NOT NULL REFERENCES manager_test_links(id) ON DELETE CASCADE,
+  changed_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  previous_status VARCHAR(50),
+  new_status VARCHAR(50),
+  previous_link TEXT,
+  new_link TEXT,
+  previous_notes TEXT,
+  new_notes TEXT,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Create indexes
 CREATE INDEX idx_users_email ON users(email);
 CREATE INDEX idx_companies_email ON companies(email);
 CREATE INDEX idx_jobs_company_id ON jobs(company_id);
 CREATE INDEX idx_applications_job_id ON applications(job_id);
 CREATE INDEX idx_subscriptions_company_id ON subscriptions(company_id);
+CREATE INDEX idx_manager_test_links_job_id ON manager_test_links(job_id);
+CREATE INDEX idx_manager_test_links_application_id ON manager_test_links(application_id);
+CREATE INDEX idx_manager_test_link_updates_test_link_id ON manager_test_link_updates(test_link_id);
 
 -- Insert admin user
 INSERT INTO users (name, email, password, role) VALUES 
-('Super Admin', 'admin@hirehub.com', '$2b$10$7LhI6i6RJWZC4Y8.7q5Dte.G5Ws3H7.8K0M9N1O2P3Q4R5S6T7U8V9W', 'superadmin');
+('Super Admin', 'admin@hirehub.com', '$2b$10$Capc9Pa2mw7Ad4CG2qj1hOl2n7KkLKZxCiGypbWeRo/qNF.QFkpJm', 'superadmin');
+
+-- Insert manager user (password: Manager12)
+INSERT INTO users (name, email, password, role) VALUES
+('Portal Manager', 'manager@hirehub.com', '$2b$10$tjv/DCqxM6Hc4gCxymyOyOyqlYKPyvGVTiy8R/x7o4BvjCd1AMyju', 'manager');

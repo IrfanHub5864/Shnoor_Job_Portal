@@ -47,8 +47,38 @@ CREATE TABLE IF NOT EXISTS activity_logs (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS manager_test_links (
+  id SERIAL PRIMARY KEY,
+  application_id INTEGER REFERENCES applications(id) ON DELETE SET NULL,
+  job_id INTEGER REFERENCES jobs(id) ON DELETE SET NULL,
+  candidate_email VARCHAR(100),
+  link_url TEXT NOT NULL,
+  notes TEXT,
+  link_status VARCHAR(50) DEFAULT 'pending',
+  created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  updated_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS manager_test_link_updates (
+  id SERIAL PRIMARY KEY,
+  test_link_id INTEGER NOT NULL REFERENCES manager_test_links(id) ON DELETE CASCADE,
+  changed_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  previous_status VARCHAR(50),
+  new_status VARCHAR(50),
+  previous_link TEXT,
+  new_link TEXT,
+  previous_notes TEXT,
+  new_notes TEXT,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE INDEX IF NOT EXISTS idx_otp_verification_user_id ON otp_verification(user_id);
 CREATE INDEX IF NOT EXISTS idx_activity_logs_entity_type ON activity_logs(entity_type);
 CREATE INDEX IF NOT EXISTS idx_activity_logs_created_at ON activity_logs(created_at);
+CREATE INDEX IF NOT EXISTS idx_manager_test_links_job_id ON manager_test_links(job_id);
+CREATE INDEX IF NOT EXISTS idx_manager_test_links_application_id ON manager_test_links(application_id);
+CREATE INDEX IF NOT EXISTS idx_manager_test_link_updates_test_link_id ON manager_test_link_updates(test_link_id);
 
 COMMIT;

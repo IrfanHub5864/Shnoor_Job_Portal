@@ -6,9 +6,14 @@ const { hashPassword, comparePassword, generateToken, generateOTP, sendOTP } = r
 const register = async (req, res) => {
   try {
     const { name, email, password, role = 'admin' } = req.body;
+    const allowedRoles = ['admin', 'manager', 'superadmin'];
 
     if (!name || !email || !password) {
       return res.status(400).json({ message: 'Name, email, and password are required' });
+    }
+
+    if (!allowedRoles.includes(role)) {
+      return res.status(400).json({ message: 'Invalid role selected' });
     }
 
     const existingUser = await User.findByEmail(email);
