@@ -6,7 +6,8 @@ CREATE TABLE users (
   password VARCHAR(255) NOT NULL,
   role VARCHAR(50) CHECK(role IN ('admin', 'superadmin', 'manager', 'user')) DEFAULT 'user',
   is_blocked BOOLEAN DEFAULT FALSE,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE user_profiles (
@@ -49,16 +50,32 @@ CREATE TABLE jobs (
   location VARCHAR(100),
   salary_min DECIMAL(10, 2),
   salary_max DECIMAL(10, 2),
+  apply_mode VARCHAR(50) DEFAULT 'direct_profile',
+  predefined_form_key VARCHAR(80),
+  custom_form_fields JSONB NOT NULL DEFAULT '[]'::jsonb,
+  google_form_url TEXT,
+  manager_instructions TEXT,
   status VARCHAR(50) CHECK(status IN ('open', 'closed')) DEFAULT 'open',
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE applications (
   id SERIAL PRIMARY KEY,
   job_id INTEGER NOT NULL REFERENCES jobs(id) ON DELETE CASCADE,
   user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  apply_source VARCHAR(50) DEFAULT 'direct_profile',
+  submitted_details JSONB NOT NULL DEFAULT '{}'::jsonb,
   status VARCHAR(50) CHECK(status IN ('applied', 'selected', 'rejected')) DEFAULT 'applied',
-  applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  test_attempted BOOLEAN DEFAULT FALSE,
+  test_score DECIMAL(5, 2),
+  test_total_questions INTEGER DEFAULT 10,
+  test_passed BOOLEAN DEFAULT FALSE,
+  test_submitted_at TIMESTAMP,
+  interview_called BOOLEAN DEFAULT FALSE,
+  interview_called_at TIMESTAMP,
+  applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE subscriptions (
@@ -103,6 +120,13 @@ CREATE TABLE manager_test_links (
   link_url TEXT NOT NULL,
   notes TEXT,
   link_status VARCHAR(50) CHECK(link_status IN ('pending', 'sent', 'completed', 'expired')) DEFAULT 'pending',
+  pass_percentage DECIMAL(5, 2) DEFAULT 75,
+  quiz_question_count INTEGER DEFAULT 10,
+  latest_score DECIMAL(5, 2),
+  is_passed BOOLEAN DEFAULT FALSE,
+  attempted_at TIMESTAMP,
+  interview_called BOOLEAN DEFAULT FALSE,
+  interview_called_at TIMESTAMP,
   created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
   updated_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

@@ -168,6 +168,20 @@
   font-weight: 600;
 }
 
+.viewBlock {
+  margin: 0;
+  background: #f5f9ff;
+  border: 1px solid #d8e6f7;
+  border-radius: 8px;
+  padding: 10px;
+}
+
+.viewLine {
+  margin: 4px 0;
+  font-size: 13px;
+  color: #224d7a;
+}
+
 .viewJson {
   margin: 0;
   background: #f5f9ff;

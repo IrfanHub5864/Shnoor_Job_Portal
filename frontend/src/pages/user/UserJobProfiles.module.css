@@ -89,6 +89,17 @@
   font-weight: 600;
 }
 
+.modeTag {
+  margin: 0 0 8px;
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 700;
+  color: #12538e;
+  background: #e9f2ff;
+  border-radius: 999px;
+  padding: 4px 10px;
+}
+
 .desc {
   margin: 0;
   color: #4f6f93;
@@ -125,4 +136,92 @@
 
 .applyBtn:disabled {
   opacity: 0.6;
+}
+
+.modalBackdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  padding: 16px;
+}
+
+.modal {
+  background: #fff;
+  width: min(640px, 96vw);
+  border-radius: 12px;
+  border: 1px solid #dce8f5;
+  padding: 16px;
+  max-height: 90vh;
+  overflow: auto;
+}
+
+.modal h3 {
+  margin: 0 0 8px;
+  color: #143f6c;
+}
+
+.modalSub {
+  margin: 0 0 8px;
+  color: #466889;
+  font-size: 13px;
+}
+
+.stack {
+  display: grid;
+  gap: 10px;
+}
+
+.stack label {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 13px;
+  color: #234f7c;
+  font-weight: 600;
+}
+
+.stack input,
+.stack textarea {
+  width: 100%;
+  border: 1px solid #d1dbe8;
+  border-radius: 8px;
+  padding: 10px;
+  font-size: 14px;
+}
+
+.checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #32577e;
+}
+
+.inlineLink {
+  color: #0b63ce;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.inlineLink:hover {
+  text-decoration: underline;
+}
+
+.modalActions {
+  margin-top: 14px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.cancelBtn {
+  background: #edf2f7;
+  color: #334a62;
+  border: 1px solid #d5e1ed;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-weight: 700;
 }

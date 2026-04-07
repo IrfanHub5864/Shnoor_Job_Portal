@@ -3,6 +3,23 @@ const Job = require('../models/Job');
 const Application = require('../models/Application');
 const UserProfile = require('../models/UserProfile');
 const ManagerTestLink = require('../models/ManagerTestLink');
+const ManagerWorkflow = require('../models/ManagerWorkflow');
+const {
+  QUIZ_QUESTIONS,
+  getJobFormFields,
+  buildPrefilledFromProfile,
+  sanitizeSubmittedDetails,
+  evaluateQuizAnswers
+} = require('../utils/applicationFlowUtils');
+
+const APPLY_MODE_LABELS = {
+  direct_profile: 'Send Directly',
+  predefined_form: 'Add Form',
+  google_form: 'Google Form Link',
+  custom_form: 'Website Custom Form'
+};
+
+const stripQuizAnswers = () => QUIZ_QUESTIONS.map(({ answerIndex, ...question }) => question);
 
 const getMyProfile = async (req, res) => {
   try {
@@ -47,6 +64,8 @@ const getUserJobs = async (req, res) => {
 
     const formattedJobs = openJobs.map((job) => ({
       ...job,
+      applyMode: job.apply_mode || 'direct_profile',
+      applyModeLabel: APPLY_MODE_LABELS[job.apply_mode || 'direct_profile'] || 'Send Directly',
       hasApplied: appliedJobIds.has(job.id)
     }));
 
@@ -56,6 +75,55 @@ const getUserJobs = async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({ message: 'Error fetching jobs', error: error.message });
+  }
+};
+
+const getJobApplicationForm = async (req, res) => {
+  try {
+    const jobId = parseInt(req.params.jobId, 10);
+    if (Number.isNaN(jobId)) {
+      return res.status(400).json({ message: 'Invalid job id' });
+    }
+
+    const job = await Job.getById(jobId);
+    if (!job) {
+      return res.status(404).json({ message: 'Job not found' });
+    }
+
+    if (job.status !== 'open') {
+      return res.status(400).json({ message: 'This job is not open for applications' });
+    }
+
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    const profile = await UserProfile.getByUserId(user);
+    const applyMode = job.apply_mode || 'direct_profile';
+    const formFields = getJobFormFields(job);
+    const prefilledPool = buildPrefilledFromProfile(user, profile);
+    const prefilledDetails = {};
+    formFields.forEach((field) => {
+      prefilledDetails[field.key] = prefilledPool[field.key] || '';
+    });
+
+    res.status(200).json({
+      message: 'Application form fetched successfully',
+      data: {
+        jobId: job.id,
+        jobTitle: job.title,
+        companyName: job.company_name,
+        applyMode,
+        applyModeLabel: APPLY_MODE_LABELS[applyMode] || 'Send Directly',
+        managerInstructions: job.manager_instructions || '',
+        googleFormUrl: job.google_form_url || '',
+        formFields,
+        prefilledDetails
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Error fetching application form', error: error.message });
   }
 };
 
@@ -80,7 +148,64 @@ const applyToJob = async (req, res) => {
       return res.status(400).json({ message: 'You have already applied for this job' });
     }
 
-    const application = await Application.create(jobId, req.user.id);
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    const profile = await UserProfile.getByUserId(user);
+    const applyMode = job.apply_mode || 'direct_profile';
+    const formFields = getJobFormFields(job);
+    const prefilledPool = buildPrefilledFromProfile(user, profile);
+    let finalValues = {};
+
+    if (applyMode === 'google_form') {
+      const confirmed = Boolean(req.body?.confirmExternalSubmission);
+      if (!confirmed) {
+        return res.status(400).json({ message: 'Please confirm Google form submission before applying' });
+      }
+
+      finalValues = {
+        googleFormUrl: job.google_form_url || '',
+        confirmation: true,
+        confirmationTime: new Date().toISOString(),
+        note: String(req.body?.googleFormNote || '').trim()
+      };
+    } else {
+      finalValues = sanitizeSubmittedDetails(formFields, req.body?.submittedDetails, prefilledPool);
+      const missingRequired = formFields
+        .filter((field) => field.required)
+        .filter((field) => !String(finalValues[field.key] || '').trim())
+        .map((field) => field.label);
+
+      if (missingRequired.length) {
+        return res.status(400).json({
+          message: `Missing required fields: ${missingRequired.join(', ')}`
+        });
+      }
+    }
+
+    const applicationPayload = {
+      applyMode,
+      applyModeLabel: APPLY_MODE_LABELS[applyMode] || 'Send Directly',
+      managerInstructions: job.manager_instructions || '',
+      values: finalValues,
+      profileSnapshot: {
+        name: profile.displayName || user.name || '',
+        email: user.email || '',
+        phone: profile.basicDetails?.phone || '',
+        headline: profile.headline || '',
+        skills: profile.skills || [],
+        resumeUrl: profile.resumeUrl || ''
+      }
+    };
+
+    const application = await Application.create(jobId, req.user.id, {
+      applySource: applyMode,
+      submittedDetails: applicationPayload,
+      testTotalQuestions: QUIZ_QUESTIONS.length
+    });
+
     res.status(201).json({
       message: 'Application submitted successfully',
       data: application
@@ -110,6 +235,7 @@ const getMyHomeData = async (req, res) => {
 
     const shortlisted = applications.filter((item) => item.status === 'selected').length;
     const rejected = applications.filter((item) => item.status === 'rejected').length;
+    const testPassed = applications.filter((item) => item.test_passed).length;
 
     res.status(200).json({
       message: 'User dashboard data fetched successfully',
@@ -118,7 +244,8 @@ const getMyHomeData = async (req, res) => {
           openJobs: openJobs.length,
           appliedJobs: applications.length,
           shortlisted,
-          rejected
+          rejected,
+          testPassed
         },
         recentApplications: applications.slice(0, 5)
       }
@@ -169,15 +296,28 @@ const getMyNotifications = async (req, res) => {
         title = 'Shortlisted for Test';
         description = `You are shortlisted for ${application.job_title}.`;
 
-        if (testLink?.link_url) {
-          title = 'Shortlisted - Test Link Sent';
-          description = `You are shortlisted for ${application.job_title}. Assessment link: ${testLink.link_url}`;
+        if (application.test_attempted) {
+          if (application.test_passed) {
+            title = 'Test Passed';
+            description = `Great job. You passed the test for ${application.job_title} with ${application.test_score || 0}%.`;
+          } else {
+            title = 'Test Update';
+            description = `Test submitted for ${application.job_title}. Score: ${application.test_score || 0}%.`;
+          }
+          createdAt = application.test_submitted_at || createdAt;
+        } else if (testLink?.link_url) {
+          title = 'Test Update: Link Shared';
+          description = `Assessment link for ${application.job_title}: ${testLink.link_url}`;
           createdAt = testLink.updated_at || createdAt;
           if (usedOrphanLink?.id) {
             usedOrphanLinkIds.add(usedOrphanLink.id);
           }
-        } else {
-          description = `${description} Test link will be shared by manager shortly.`;
+        }
+
+        if (application.interview_called) {
+          title = 'Interview Call';
+          description = `Interview call has been sent for ${application.job_title}. Please check Interviews section.`;
+          createdAt = application.interview_called_at || createdAt;
         }
       }
 
@@ -199,8 +339,8 @@ const getMyNotifications = async (req, res) => {
       .filter((link) => !usedOrphanLinkIds.has(link.id))
       .map((link) => ({
         id: `assessment-${link.id}`,
-        title: 'Assessment Link Shared',
-        description: `Manager shared an assessment link for ${link.job_title || 'your application'}: ${link.link_url}`,
+        title: 'Test Update Shared',
+        description: `Manager shared a test update for ${link.job_title || 'your application'}: ${link.link_url}`,
         status: link.link_status || 'sent',
         createdAt: link.updated_at || link.created_at
       }));
@@ -219,20 +359,43 @@ const getMyNotifications = async (req, res) => {
 
 const getMyInterviews = async (req, res) => {
   try {
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
     const applications = await Application.getByUserId(req.user.id);
-    const interviews = applications
-      .filter((item) => item.status === 'selected')
+    const managerInterviews = await ManagerWorkflow.getInterviews();
+    const normalizedEmail = (user.email || '').toLowerCase();
+
+    const interviewItems = managerInterviews
+      .filter((item) => (item.candidate_email || '').toLowerCase() === normalizedEmail)
       .map((item) => ({
         id: item.id,
+        jobId: item.job_id,
+        jobTitle: item.job_title || 'Job Opportunity',
+        companyName: 'Hiring Team',
+        status: item.status || 'scheduled',
+        scheduledAt: item.scheduled_at,
+        interviewType: item.interview_type,
+        mode: item.mode,
+        meetingLink: item.meeting_link
+      }));
+
+    const scheduledJobIds = new Set(interviewItems.map((item) => Number(item.jobId)).filter(Boolean));
+    const awaitingItems = applications
+      .filter((item) => item.status === 'selected' && !scheduledJobIds.has(Number(item.job_id)))
+      .map((item) => ({
+        id: `awaiting-${item.id}`,
         jobTitle: item.job_title,
         companyName: item.company_name,
-        status: 'awaiting_schedule',
+        status: item.interview_called ? 'awaiting_schedule' : 'awaiting_call',
         scheduledAt: null
       }));
 
     res.status(200).json({
       message: 'Interview data fetched successfully',
-      data: interviews
+      data: [...interviewItems, ...awaitingItems]
     });
   } catch (error) {
     res.status(500).json({ message: 'Error fetching interviews', error: error.message });
@@ -266,18 +429,41 @@ const getMyAssessments = async (req, res) => {
       .filter((item) => item.status === 'selected')
       .map((item) => {
         const link = latestTestLinkByApplicationId.get(item.id) || latestOrphanByJobId.get(item.job_id);
+        const testAttempted = Boolean(item.test_attempted || link?.attempted_at);
+        const testPassed = Boolean(item.test_passed || link?.is_passed);
+        const canTakeTest = Boolean(link?.link_url) && !testAttempted;
+        const passPercentage = Number(link?.pass_percentage) || 75;
+        const quizQuestionCount = Number(link?.quiz_question_count) || QUIZ_QUESTIONS.length;
+
+        let status = 'awaiting_test_link';
+        if (link?.link_url) {
+          if (testAttempted && testPassed) {
+            status = 'test_passed';
+          } else if (testAttempted && !testPassed) {
+            status = 'test_failed';
+          } else {
+            status = link?.link_status === 'sent' ? 'test_link_sent' : `test_${link?.link_status || 'pending'}`;
+          }
+        }
+
         return {
           id: item.id,
           jobTitle: item.job_title,
           companyName: item.company_name,
-          status: link?.link_status === 'sent'
-            ? 'test_link_sent'
-            : (link?.link_status ? `test_${link.link_status}` : 'not_scheduled'),
+          status,
           startTime: null,
           endTime: null,
           testLink: link?.link_url || null,
           notes: link?.notes || null,
-          updatedAt: link?.updated_at || item.updated_at || item.applied_at
+          updatedAt: link?.updated_at || item.updated_at || item.applied_at,
+          testAttempted,
+          testPassed,
+          testScore: item.test_score ?? link?.latest_score ?? null,
+          passPercentage,
+          quizQuestionCount,
+          canTakeTest,
+          interviewCalled: Boolean(item.interview_called || link?.interview_called),
+          quizQuestions: canTakeTest ? stripQuizAnswers() : []
         };
       });
 
@@ -290,14 +476,81 @@ const getMyAssessments = async (req, res) => {
   }
 };
 
+const submitAssessmentQuiz = async (req, res) => {
+  try {
+    const applicationId = parseInt(req.params.applicationId, 10);
+    if (Number.isNaN(applicationId)) {
+      return res.status(400).json({ message: 'Invalid application id' });
+    }
+
+    const application = await Application.getById(applicationId);
+    if (!application || Number(application.user_id) !== Number(req.user.id)) {
+      return res.status(404).json({ message: 'Application not found' });
+    }
+
+    if (application.test_attempted) {
+      return res.status(400).json({ message: 'Test can be attempted only once' });
+    }
+
+    const link = await ManagerTestLink.getLatestByApplicationId(applicationId);
+    if (!link?.link_url) {
+      return res.status(400).json({ message: 'No active test link found for this application' });
+    }
+
+    const answers = Array.isArray(req.body?.answers) ? req.body.answers : [];
+    const result = evaluateQuizAnswers(answers);
+    const passPercentage = Number(link.pass_percentage) || 75;
+    const passed = result.scorePercentage >= passPercentage;
+
+    const updatedApplication = await Application.updateTestResult(applicationId, {
+      testScore: result.scorePercentage,
+      testTotalQuestions: result.totalQuestions,
+      testPassed: passed
+    });
+
+    const updatedLink = await ManagerTestLink.update(
+      link.id,
+      {
+        linkStatus: 'completed',
+        latestScore: result.scorePercentage,
+        isPassed: passed,
+        attemptedAt: new Date().toISOString(),
+        notes: link.notes
+          ? `${link.notes} | User attempted test and scored ${result.scorePercentage}%`
+          : `User attempted test and scored ${result.scorePercentage}%`
+      },
+      req.user.id
+    );
+
+    await ManagerTestLink.createUpdateLog(link.id, link, updatedLink, req.user.id);
+
+    res.status(200).json({
+      message: passed ? 'Test passed successfully' : 'Test submitted successfully',
+      data: {
+        applicationId,
+        score: result.scorePercentage,
+        passed,
+        passPercentage,
+        correctAnswers: result.correctCount,
+        totalQuestions: result.totalQuestions,
+        updatedApplication
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Error submitting assessment test', error: error.message });
+  }
+};
+
 module.exports = {
   getMyProfile,
   upsertMyProfile,
   getUserJobs,
+  getJobApplicationForm,
   applyToJob,
   getMyApplications,
   getMyHomeData,
   getMyNotifications,
   getMyInterviews,
-  getMyAssessments
+  getMyAssessments,
+  submitAssessmentQuiz
 };

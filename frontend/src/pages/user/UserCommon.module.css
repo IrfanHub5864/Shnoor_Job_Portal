@@ -77,6 +77,15 @@
   margin-bottom: 14px;
 }
 
+.info {
+  background: #e9f6ec;
+  border: 1px solid #cdebd4;
+  color: #1f6640;
+  padding: 12px 14px;
+  border-radius: 8px;
+  margin-bottom: 14px;
+}
+
 .loading {
   display: flex;
   justify-content: center;
@@ -128,4 +137,104 @@
   margin: 0;
   font-size: 13px;
   color: #4f6f94;
+}
+
+.rowActions {
+  margin-top: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.passBadge {
+  background: #e8f8ec;
+  color: #0d7a38;
+}
+
+.actionBtn {
+  background: #1f5a98;
+  color: #fff;
+  border: 0;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.actionBtn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.cancelBtn {
+  background: #edf2f7;
+  color: #334a62;
+  border: 1px solid #d5e1ed;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.modalBackdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  padding: 16px;
+}
+
+.modal {
+  width: min(860px, 96vw);
+  max-height: 90vh;
+  overflow: auto;
+  background: #fff;
+  border-radius: 12px;
+  border: 1px solid #dce8f6;
+  padding: 16px;
+}
+
+.quizList {
+  margin-top: 10px;
+  display: grid;
+  gap: 10px;
+}
+
+.quizCard {
+  border: 1px solid #e4edf8;
+  border-radius: 10px;
+  background: #fbfdff;
+  padding: 10px 12px;
+}
+
+.quizQ {
+  margin: 0 0 8px;
+  color: #1b4b7e;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.quizOptions {
+  display: grid;
+  gap: 6px;
+}
+
+.optionRow {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  font-size: 13px;
+  color: #3d5f84;
+}
+
+.modalActions {
+  margin-top: 12px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
 }

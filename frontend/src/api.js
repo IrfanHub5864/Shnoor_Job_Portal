@@ -103,6 +103,7 @@ export const managerAPI = {
   getTestLinks: () => api.get('/manager/test-links'),
   createTestLink: (data) => api.post('/manager/test-links', data),
   updateTestLink: (id, data) => api.put(`/manager/test-links/${id}`, data),
+  callCandidateForInterview: (id, data) => api.post(`/manager/test-links/${id}/call-interview`, data),
   getTestLinkUpdates: () => api.get('/manager/test-link-updates'),
 
   getInterviews: () => api.get('/manager/interviews'),
@@ -122,11 +123,13 @@ export const userPortalAPI = {
   getProfile: () => api.get('/user-portal/profile'),
   updateProfile: (data) => api.put('/user-portal/profile', data),
   getJobs: () => api.get('/user-portal/jobs'),
-  applyToJob: (jobId) => api.post(`/user-portal/jobs/${jobId}/apply`),
+  getJobApplicationForm: (jobId) => api.get(`/user-portal/jobs/${jobId}/application-form`),
+  applyToJob: (jobId, data) => api.post(`/user-portal/jobs/${jobId}/apply`, data),
   getApplications: () => api.get('/user-portal/applications'),
   getNotifications: () => api.get('/user-portal/notifications'),
   getInterviews: () => api.get('/user-portal/interviews'),
-  getAssessments: () => api.get('/user-portal/assessments')
+  getAssessments: () => api.get('/user-portal/assessments'),
+  submitAssessmentQuiz: (applicationId, data) => api.post(`/user-portal/assessments/${applicationId}/submit`, data)
 };
 
 export default api;

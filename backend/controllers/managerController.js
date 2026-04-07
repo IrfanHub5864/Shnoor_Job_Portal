@@ -6,6 +6,39 @@ const Application = require('../models/Application');
 const ManagerTestLink = require('../models/ManagerTestLink');
 const ManagerWorkflow = require('../models/ManagerWorkflow');
 const ActivityLog = require('../models/ActivityLog');
+const { getPredefinedFormFields } = require('../utils/applicationFlowUtils');
+
+const ALLOWED_APPLY_MODES = ['direct_profile', 'predefined_form', 'google_form', 'custom_form'];
+
+const normalizeCustomFormFields = (fields) => {
+  if (!Array.isArray(fields)) {
+    return [];
+  }
+
+  return fields
+    .map((field, index) => {
+      if (!field || typeof field !== 'object') {
+        return null;
+      }
+
+      const label = String(field.label || '').trim();
+      const keySource = String(field.key || label || `field_${index + 1}`).trim().toLowerCase();
+      const key = keySource.replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 40);
+      const type = ['text', 'email', 'number', 'textarea', 'url', 'date'].includes(field.type) ? field.type : 'text';
+
+      if (!label || !key) {
+        return null;
+      }
+
+      return {
+        key,
+        label,
+        type,
+        required: Boolean(field.required)
+      };
+    })
+    .filter(Boolean);
+};
 
 const getProfile = async (req, res) => {
   try {
@@ -114,10 +147,26 @@ const getManagerJobs = async (req, res) => {
 
 const createManagerJob = async (req, res) => {
   try {
-    const { companyId, title, description, location, salaryMin, salaryMax } = req.body;
+    const {
+      companyId,
+      title,
+      description,
+      location,
+      salaryMin,
+      salaryMax,
+      applyMode = 'direct_profile',
+      predefinedFormKey = 'basic_screening',
+      customFormFields = [],
+      googleFormUrl = '',
+      managerInstructions = ''
+    } = req.body;
 
     if (!title) {
       return res.status(400).json({ message: 'title is required' });
+    }
+
+    if (!ALLOWED_APPLY_MODES.includes(applyMode)) {
+      return res.status(400).json({ message: 'Invalid apply mode selected' });
     }
 
     let selectedCompanyId = companyId ? Number(companyId) : null;
@@ -131,13 +180,33 @@ const createManagerJob = async (req, res) => {
       return res.status(400).json({ message: 'No company available. Create company first.' });
     }
 
+    if (applyMode === 'google_form' && !String(googleFormUrl || '').trim()) {
+      return res.status(400).json({ message: 'Google form link is required for google_form mode' });
+    }
+
+    const normalizedCustomFields = normalizeCustomFormFields(customFormFields);
+    if (applyMode === 'custom_form' && !normalizedCustomFields.length) {
+      return res.status(400).json({ message: 'At least one custom field is required for custom_form mode' });
+    }
+
+    const finalCustomFields = applyMode === 'predefined_form'
+      ? getPredefinedFormFields(predefinedFormKey)
+      : (applyMode === 'custom_form' ? normalizedCustomFields : []);
+
     const job = await Job.create(
       selectedCompanyId,
       title,
       description || '',
       salaryMin || null,
       salaryMax || null,
-      location || 'Remote'
+      location || 'Remote',
+      {
+        applyMode,
+        predefinedFormKey: applyMode === 'predefined_form' ? predefinedFormKey : null,
+        customFormFields: finalCustomFields,
+        googleFormUrl: applyMode === 'google_form' ? String(googleFormUrl).trim() : null,
+        managerInstructions: managerInstructions ? String(managerInstructions).trim() : null
+      }
     );
 
     await ActivityLog.record('Manager Created Job', 'job', job.id);
@@ -217,7 +286,7 @@ const updateManagerApplicationStatus = async (req, res) => {
 const shortlistAndSendTestLink = async (req, res) => {
   try {
     const applicationId = Number(req.params.id);
-    const { linkUrl, notes, linkStatus = 'sent' } = req.body;
+    const { linkUrl, notes, linkStatus = 'sent', passPercentage = 75, quizQuestionCount = 10 } = req.body;
 
     if (Number.isNaN(applicationId)) {
       return res.status(400).json({ message: 'Invalid application id' });
@@ -229,6 +298,16 @@ const shortlistAndSendTestLink = async (req, res) => {
 
     if (!['pending', 'sent', 'completed', 'expired'].includes(linkStatus)) {
       return res.status(400).json({ message: 'Invalid link status' });
+    }
+
+    const normalizedPassPercentage = Number(passPercentage) || 75;
+    if (normalizedPassPercentage <= 0 || normalizedPassPercentage > 100) {
+      return res.status(400).json({ message: 'Pass percentage should be between 1 and 100' });
+    }
+
+    const normalizedQuizQuestionCount = Number(quizQuestionCount) || 10;
+    if (normalizedQuizQuestionCount < 1) {
+      return res.status(400).json({ message: 'Quiz question count should be at least 1' });
     }
 
     const application = await Application.getById(applicationId);
@@ -248,7 +327,9 @@ const shortlistAndSendTestLink = async (req, res) => {
       candidateEmail: application.user_email,
       linkUrl: String(linkUrl).trim(),
       notes: notes || `Assessment link shared for ${application.job_title || 'job application'}`,
-      linkStatus
+      linkStatus,
+      passPercentage: normalizedPassPercentage,
+      quizQuestionCount: normalizedQuizQuestionCount
     };
 
     const existingLink = await ManagerTestLink.getLatestByApplicationId(applicationId);
@@ -289,7 +370,7 @@ const getTestLinks = async (req, res) => {
 
 const createTestLink = async (req, res) => {
   try {
-    const { linkUrl, linkStatus } = req.body;
+    const { linkUrl, linkStatus, passPercentage = 75, quizQuestionCount = 10 } = req.body;
 
     if (!linkUrl) {
       return res.status(400).json({ message: 'linkUrl is required' });
@@ -299,7 +380,24 @@ const createTestLink = async (req, res) => {
       return res.status(400).json({ message: 'Invalid link status' });
     }
 
-    const testLink = await ManagerTestLink.create(req.body, req.user.id);
+    const normalizedPassPercentage = Number(passPercentage) || 75;
+    if (normalizedPassPercentage <= 0 || normalizedPassPercentage > 100) {
+      return res.status(400).json({ message: 'Pass percentage should be between 1 and 100' });
+    }
+
+    const normalizedQuizQuestionCount = Number(quizQuestionCount) || 10;
+    if (normalizedQuizQuestionCount < 1) {
+      return res.status(400).json({ message: 'Quiz question count should be at least 1' });
+    }
+
+    const testLink = await ManagerTestLink.create(
+      {
+        ...req.body,
+        passPercentage: normalizedPassPercentage,
+        quizQuestionCount: normalizedQuizQuestionCount
+      },
+      req.user.id
+    );
     await ActivityLog.record('Manager Created Test Link', 'manager_test_link', testLink.id);
 
     return res.status(201).json({
@@ -324,6 +422,20 @@ const updateTestLink = async (req, res) => {
       return res.status(400).json({ message: 'Invalid link status' });
     }
 
+    if (req.body.passPercentage !== undefined) {
+      const normalizedPassPercentage = Number(req.body.passPercentage);
+      if (!normalizedPassPercentage || normalizedPassPercentage <= 0 || normalizedPassPercentage > 100) {
+        return res.status(400).json({ message: 'Pass percentage should be between 1 and 100' });
+      }
+    }
+
+    if (req.body.quizQuestionCount !== undefined) {
+      const normalizedQuizQuestionCount = Number(req.body.quizQuestionCount);
+      if (!normalizedQuizQuestionCount || normalizedQuizQuestionCount < 1) {
+        return res.status(400).json({ message: 'Quiz question count should be at least 1' });
+      }
+    }
+
     const updated = await ManagerTestLink.update(id, req.body, req.user.id);
     await ManagerTestLink.createUpdateLog(id, current, updated, req.user.id);
     await ActivityLog.record('Manager Updated Test Link', 'manager_test_link', id);
@@ -334,6 +446,83 @@ const updateTestLink = async (req, res) => {
     });
   } catch (error) {
     return res.status(500).json({ message: 'Error updating test link', error: error.message });
+  }
+};
+
+const callCandidateForInterviewFromTest = async (req, res) => {
+  try {
+    const testLinkId = Number(req.params.id);
+    if (Number.isNaN(testLinkId)) {
+      return res.status(400).json({ message: 'Invalid test link id' });
+    }
+
+    const testLink = await ManagerTestLink.getById(testLinkId);
+    if (!testLink) {
+      return res.status(404).json({ message: 'Test link not found' });
+    }
+
+    if (!testLink.is_passed) {
+      return res.status(400).json({ message: 'Candidate has not passed the test yet' });
+    }
+
+    if (!testLink.candidate_email) {
+      return res.status(400).json({ message: 'Candidate email missing for this test link' });
+    }
+
+    const scheduledAt = req.body.scheduledAt
+      ? new Date(req.body.scheduledAt)
+      : new Date(Date.now() + (24 * 60 * 60 * 1000));
+
+    if (Number.isNaN(scheduledAt.getTime())) {
+      return res.status(400).json({ message: 'Invalid interview schedule time' });
+    }
+
+    const interviewPayload = {
+      jobId: testLink.job_id || null,
+      candidateEmail: testLink.candidate_email,
+      interviewType: req.body.interviewType || 'Technical',
+      interviewerName: req.body.interviewerName || '',
+      scheduledAt: scheduledAt.toISOString(),
+      mode: req.body.mode || 'Online',
+      meetingLink: req.body.meetingLink || '',
+      notes: req.body.notes || 'Interview call sent after test qualification'
+    };
+
+    const interview = await ManagerWorkflow.createInterview(interviewPayload, req.user.id);
+
+    await ManagerWorkflow.createInterviewUpdate({
+      interviewId: interview.id,
+      updatedBy: req.user.id,
+      candidateEmail: interview.candidate_email,
+      previousStatus: null,
+      newStatus: 'scheduled',
+      message: `Interview call sent for ${interview.candidate_email}`
+    });
+
+    await ManagerTestLink.update(
+      testLinkId,
+      {
+        interviewCalled: true,
+        interviewCalledAt: new Date().toISOString(),
+        notes: testLink.notes
+          ? `${testLink.notes} | Interview call sent`
+          : 'Interview call sent'
+      },
+      req.user.id
+    );
+
+    if (testLink.application_id) {
+      await Application.markInterviewCalled(testLink.application_id);
+    }
+
+    await ActivityLog.record('Manager Called Candidate For Interview', 'interview', interview.id);
+
+    return res.status(201).json({
+      message: 'Interview call sent successfully',
+      data: interview
+    });
+  } catch (error) {
+    return res.status(500).json({ message: 'Error sending interview call', error: error.message });
   }
 };
 
@@ -479,7 +668,7 @@ const getManagerStats = async (req, res) => {
     const interviews = await ManagerWorkflow.getInterviews();
     const offboardingLetters = await ManagerWorkflow.getOffboardingLetters();
 
-    const completedTests = testLinks.filter((item) => item.link_status === 'completed');
+    const completedTests = testLinks.filter((item) => item.is_passed || item.link_status === 'completed');
     const completedInterviews = interviews.filter((item) => item.status === 'completed');
 
     const testCandidates = new Set(
@@ -528,8 +717,8 @@ const getRecentUpdates = async (req, res) => {
       type: 'Test',
       candidate_email: item.candidate_email || 'candidate@hirehub.com',
       message: item.new_status === 'completed'
-        ? 'Candidate completed exam'
-        : `Candidate test status updated to ${item.new_status || 'N/A'}`,
+        ? 'Candidate completed test update'
+        : `Candidate test update changed to ${item.new_status || 'N/A'}`,
       updated_at: item.updated_at
     }));
 
@@ -576,6 +765,7 @@ module.exports = {
   getTestLinks,
   createTestLink,
   updateTestLink,
+  callCandidateForInterviewFromTest,
   getTestLinkUpdates,
   getInterviews,
   createInterview,

@@ -43,6 +43,16 @@ const UserInterviews = () => {
                   <p className={styles.itemMeta}>
                     {item.scheduledAt ? `Scheduled at ${new Date(item.scheduledAt).toLocaleString()}` : 'Schedule pending from manager'}
                   </p>
+                  {item.interviewType && <p className={styles.itemMeta}>Type: {item.interviewType}</p>}
+                  {item.mode && <p className={styles.itemMeta}>Mode: {item.mode}</p>}
+                  {item.meetingLink && (
+                    <p className={styles.itemMeta}>
+                      Meeting Link:{' '}
+                      <a href={item.meetingLink} target="_blank" rel="noreferrer" className={styles.inlineLink}>
+                        Join Interview
+                      </a>
+                    </p>
+                  )}
                   <span className={styles.badge}>{item.status.replaceAll('_', ' ')}</span>
                 </div>
               ))}

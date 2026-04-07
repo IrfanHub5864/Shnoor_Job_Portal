@@ -10,7 +10,7 @@ const menuItems = [
   { key: 'jobs', label: 'Job Updates' },
   { key: 'applications', label: 'Applications' },
   { key: 'interviews', label: 'Interviews' },
-  { key: 'test-links', label: 'Test Links' },
+  { key: 'test-links', label: 'Test Updates' },
   { key: 'offboarding', label: 'Offboarding Letters' },
   { key: 'updates', label: 'Recent Updates' }
 ];

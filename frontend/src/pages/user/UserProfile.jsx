@@ -686,39 +686,91 @@ const UserProfile = () => {
             </div>
             <div className={styles.fullWidth}>
               <p className={styles.viewLabel}>Basic Details</p>
-              <pre className={styles.viewJson}>{JSON.stringify(profile.basicDetails || {}, null, 2)}</pre>
+              <div className={styles.viewBlock}>
+                {Object.entries(profile.basicDetails || {}).map(([key, value]) => (
+                  <p key={key} className={styles.viewLine}><strong>{key}:</strong> {value || 'N/A'}</p>
+                ))}
+              </div>
             </div>
             <div className={styles.fullWidth}>
               <p className={styles.viewLabel}>Education</p>
-              <pre className={styles.viewJson}>{JSON.stringify(profile.educationDetails || [], null, 2)}</pre>
+              <div className={styles.viewBlock}>
+                {(profile.educationDetails || []).length === 0 ? (
+                  <p className={styles.viewLine}>No education records</p>
+                ) : (
+                  profile.educationDetails.map((item, index) => (
+                    <p key={`edu-${index}`} className={styles.viewLine}>
+                      <strong>{item.degree || 'Degree'}:</strong> {item.institution || 'N/A'} ({item.startYear || 'N/A'} - {item.endYear || 'N/A'}) {item.grade ? `| Grade: ${item.grade}` : ''}
+                    </p>
+                  ))
+                )}
+              </div>
             </div>
             <div className={styles.fullWidth}>
               <p className={styles.viewLabel}>Internships</p>
-              <pre className={styles.viewJson}>{JSON.stringify(profile.internships || [], null, 2)}</pre>
+              <div className={styles.viewBlock}>
+                {(profile.internships || []).length === 0 ? (
+                  <p className={styles.viewLine}>No internship records</p>
+                ) : (
+                  profile.internships.map((item, index) => (
+                    <p key={`intern-${index}`} className={styles.viewLine}>
+                      <strong>{item.company || 'Company'}:</strong> {item.role || 'N/A'} {item.duration ? `| ${item.duration}` : ''}
+                    </p>
+                  ))
+                )}
+              </div>
             </div>
             <div className={styles.fullWidth}>
               <p className={styles.viewLabel}>Work Experience</p>
-              <pre className={styles.viewJson}>{JSON.stringify(profile.workExperience || [], null, 2)}</pre>
+              <div className={styles.viewBlock}>
+                {(profile.workExperience || []).length === 0 ? (
+                  <p className={styles.viewLine}>No work experience records</p>
+                ) : (
+                  profile.workExperience.map((item, index) => (
+                    <p key={`work-${index}`} className={styles.viewLine}>
+                      <strong>{item.company || 'Company'}:</strong> {item.role || 'N/A'} ({item.startDate || 'N/A'} - {item.endDate || 'N/A'})
+                    </p>
+                  ))
+                )}
+              </div>
             </div>
             <div className={styles.fullWidth}>
               <p className={styles.viewLabel}>Skills / Subsets / Languages</p>
-              <pre className={styles.viewJson}>{JSON.stringify({
-                skills: profile.skills || [],
-                subsets: profile.subsets || [],
-                languages: profile.languages || []
-              }, null, 2)}</pre>
+              <div className={styles.viewBlock}>
+                <p className={styles.viewLine}><strong>Skills:</strong> {(profile.skills || []).join(', ') || 'N/A'}</p>
+                <p className={styles.viewLine}><strong>Subsets:</strong> {(profile.subsets || []).join(', ') || 'N/A'}</p>
+                <p className={styles.viewLine}><strong>Languages:</strong> {(profile.languages || []).join(', ') || 'N/A'}</p>
+              </div>
             </div>
             <div className={styles.fullWidth}>
               <p className={styles.viewLabel}>Projects</p>
-              <pre className={styles.viewJson}>{JSON.stringify(profile.projects || [], null, 2)}</pre>
+              <div className={styles.viewBlock}>
+                {(profile.projects || []).length === 0 ? (
+                  <p className={styles.viewLine}>No projects added</p>
+                ) : (
+                  profile.projects.map((item, index) => (
+                    <p key={`project-${index}`} className={styles.viewLine}>
+                      <strong>{item.title || 'Project'}:</strong> {item.technologies || 'N/A'} {item.link ? `| ${item.link}` : ''}
+                    </p>
+                  ))
+                )}
+              </div>
             </div>
             <div className={styles.fullWidth}>
               <p className={styles.viewLabel}>Accomplishments</p>
-              <pre className={styles.viewJson}>{JSON.stringify(profile.accomplishments || {}, null, 2)}</pre>
+              <div className={styles.viewBlock}>
+                <p className={styles.viewLine}><strong>Certifications:</strong> {(profile.accomplishments?.certifications || []).join(', ') || 'N/A'}</p>
+                <p className={styles.viewLine}><strong>Patents:</strong> {(profile.accomplishments?.patents || []).join(', ') || 'N/A'}</p>
+                <p className={styles.viewLine}><strong>Awards:</strong> {(profile.accomplishments?.awards || []).join(', ') || 'N/A'}</p>
+                <p className={styles.viewLine}><strong>Achievements:</strong> {(profile.accomplishments?.achievements || []).join(', ') || 'N/A'}</p>
+                <p className={styles.viewLine}><strong>Scholarships:</strong> {(profile.accomplishments?.scholarships || []).join(', ') || 'N/A'}</p>
+              </div>
             </div>
             <div className={styles.fullWidth}>
               <p className={styles.viewLabel}>Extra Curricular Activities</p>
-              <pre className={styles.viewJson}>{JSON.stringify(profile.extraCurricularActivities || [], null, 2)}</pre>
+              <div className={styles.viewBlock}>
+                <p className={styles.viewLine}>{(profile.extraCurricularActivities || []).join(', ') || 'N/A'}</p>
+              </div>
             </div>
             <div>
               <p className={styles.viewLabel}>Profile Photo Uploaded</p>

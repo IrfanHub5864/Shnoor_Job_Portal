@@ -31,7 +31,7 @@ const UserLayout = ({ children, currentPage, pageTitle, currentSubSection }) => 
       { name: 'Job Profiles', path: '/user/job-profiles', icon: 'JP' },
       { name: 'My Profile', path: '/user/my-profile', icon: 'MP', children: profileSubSections },
       { name: 'Interviews', path: '/user/interviews', icon: 'IV' },
-      { name: 'Assessments', path: '/user/assessments', icon: 'AS' },
+      { name: 'Test Updates', path: '/user/assessments', icon: 'AS' },
       { name: 'Events', path: '/user/events', icon: 'EV' },
       { name: 'Competitions', path: '/user/competitions', icon: 'CP' },
       { name: 'Resume', path: '/user/resume', icon: 'RS' },

@@ -13,6 +13,7 @@ const {
   getTestLinks,
   createTestLink,
   updateTestLink,
+  callCandidateForInterviewFromTest,
   getTestLinkUpdates,
   getInterviews,
   createInterview,
@@ -44,6 +45,7 @@ router.post('/applications/:id/shortlist-test', shortlistAndSendTestLink);
 router.get('/test-links', getTestLinks);
 router.post('/test-links', createTestLink);
 router.put('/test-links/:id', updateTestLink);
+router.post('/test-links/:id/call-interview', callCandidateForInterviewFromTest);
 router.get('/test-link-updates', getTestLinkUpdates);
 router.get('/interviews', getInterviews);
 router.post('/interviews', createInterview);

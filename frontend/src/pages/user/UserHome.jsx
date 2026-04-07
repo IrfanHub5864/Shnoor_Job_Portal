@@ -59,6 +59,10 @@ const UserHome = () => {
           <p className={styles.statTitle}>Rejected</p>
           <p className={styles.statValue}>{data?.stats?.rejected || 0}</p>
         </article>
+        <article className={styles.statCard}>
+          <p className={styles.statTitle}>Tests Passed</p>
+          <p className={styles.statValue}>{data?.stats?.testPassed || 0}</p>
+        </article>
       </section>
 
       <section className={styles.grid}>
