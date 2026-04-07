@@ -10,6 +10,7 @@ const {
   getManagerApplications,
   updateManagerApplicationStatus,
   shortlistAndSendTestLink,
+  atsShortlistApplications,
   getTestLinks,
   createTestLink,
   updateTestLink,
@@ -41,6 +42,7 @@ router.put('/jobs/:id/status', updateJobStatus);
 router.get('/applications', getManagerApplications);
 router.put('/applications/:id/status', updateManagerApplicationStatus);
 router.post('/applications/:id/shortlist-test', shortlistAndSendTestLink);
+router.post('/jobs/:id/ats-shortlist', atsShortlistApplications);
 
 router.get('/test-links', getTestLinks);
 router.post('/test-links', createTestLink);

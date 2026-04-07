@@ -9,16 +9,14 @@ const {
   rejectCompany,
   blockCompany
 } = require('../controllers/companyController');
-const { authenticateAdmin } = require('../middleware/authMiddleware');
+const { authenticateAdmin, authenticateRoles } = require('../middleware/authMiddleware');
 
-router.use(authenticateAdmin);
-
-router.get('/', getAllCompanies);
-router.get('/:id/details', getCompanyDetails);
-router.get('/:id', getCompanyById);
-router.put('/:id/status', updateCompanyStatus);
-router.put('/:id/approve', approveCompany);
-router.put('/:id/reject', rejectCompany);
-router.put('/:id/block', blockCompany);
+router.get('/', authenticateRoles('admin', 'superadmin', 'manager'), getAllCompanies);
+router.get('/:id/details', authenticateRoles('admin', 'superadmin', 'manager'), getCompanyDetails);
+router.get('/:id', authenticateRoles('admin', 'superadmin', 'manager'), getCompanyById);
+router.put('/:id/status', authenticateAdmin, updateCompanyStatus);
+router.put('/:id/approve', authenticateAdmin, approveCompany);
+router.put('/:id/reject', authenticateAdmin, rejectCompany);
+router.put('/:id/block', authenticateAdmin, blockCompany);
 
 module.exports = router;

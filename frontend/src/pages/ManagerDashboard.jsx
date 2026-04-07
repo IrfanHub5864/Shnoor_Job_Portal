@@ -18,6 +18,22 @@ const APPLY_MODE_LABELS = {
   custom_form: 'Website Custom Form'
 };
 
+const buildAtsFallbackScore = (application) => {
+  const values = application?.submitted_details?.values || {};
+  const joinedValues = Object.values(values)
+    .flatMap((value) => (Array.isArray(value) ? value : [value]))
+    .filter(Boolean)
+    .map((value) => String(value).trim())
+    .join(' ');
+
+  let score = 35;
+  if (application.user_resume_url) score += 30;
+  if (joinedValues) score += Math.min(25, joinedValues.length / 8);
+  if (application.user_display_name || application.user_name) score += 10;
+
+  return Math.max(0, Math.min(100, Math.round(score)));
+};
+
 const emptyJobForm = () => ({
   companyId: '',
   title: '',
@@ -46,6 +62,9 @@ const ManagerDashboard = () => {
   const [interviews, setInterviews] = useState([]);
   const [offboardingLetters, setOffboardingLetters] = useState([]);
   const [recentUpdates, setRecentUpdates] = useState([]);
+  const [atsJobId, setAtsJobId] = useState('');
+  const [atsShortlistCount, setAtsShortlistCount] = useState(2);
+  const [atsScores, setAtsScores] = useState({});
 
   const [profileForm, setProfileForm] = useState({ name: '', phone: '', department: '', bio: '', photo_url: '' });
   const [newJobForm, setNewJobForm] = useState(emptyJobForm);
@@ -55,6 +74,17 @@ const ManagerDashboard = () => {
   const [newOffboardingForm, setNewOffboardingForm] = useState({ candidateEmail: '', jobId: '', notes: '' });
 
   const visibleUsers = useMemo(() => users.filter((u) => u.role !== 'superadmin'), [users]);
+  const applicationJobs = useMemo(() => {
+    const seen = new Set();
+    return applications.filter((application) => {
+      const key = Number(application.job_id);
+      if (!key || seen.has(key)) {
+        return false;
+      }
+      seen.add(key);
+      return true;
+    });
+  }, [applications]);
 
   const loadData = async () => {
     setLoading(true);
@@ -148,6 +178,66 @@ const ManagerDashboard = () => {
     await withSave(() => managerAPI.callCandidateForInterview(link.id, { scheduledAt, meetingLink }), 'Failed to send interview call');
   };
 
+  const runAtsShortlist = async () => {
+    if (!atsJobId) {
+      setError('Select a job before running ATS shortlist');
+      return;
+    }
+
+    setSaving(true);
+    setError('');
+    try {
+      const response = await managerAPI.atsShortlistApplications(atsJobId, { shortlistCount: atsShortlistCount });
+      const ranked = response.data?.data?.rankedApplications || [];
+      const nextScores = {};
+      ranked.forEach((application) => {
+        nextScores[application.id] = {
+          score: application.atsScore,
+          reason: application.atsReason
+        };
+      });
+      setAtsScores(nextScores);
+      await loadData();
+    } catch (err) {
+      const routeMissing = err.response?.status === 404 && err.response?.data?.message === 'Route not found';
+      if (!routeMissing) {
+        setError(err.response?.data?.message || 'Failed to run ATS shortlist');
+        setSaving(false);
+        return;
+      }
+
+      const ranked = applications
+        .filter((application) => Number(application.job_id) === Number(atsJobId))
+        .map((application) => ({
+          ...application,
+          atsScore: buildAtsFallbackScore(application),
+          atsReason: application.user_resume_url
+            ? 'Resume and submitted details matched in fallback ATS'
+            : 'Submitted details matched in fallback ATS'
+        }))
+        .sort((left, right) => right.atsScore - left.atsScore || new Date(left.applied_at) - new Date(right.applied_at));
+
+      const nextScores = {};
+      ranked.forEach((application) => {
+        nextScores[application.id] = {
+          score: application.atsScore,
+          reason: application.atsReason
+        };
+      });
+
+      for (const application of ranked.slice(0, atsShortlistCount)) {
+        if (application.status !== 'selected') {
+          await managerAPI.updateApplicationStatus(application.id, 'selected');
+        }
+      }
+
+      setAtsScores(nextScores);
+      await loadData();
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const renderApplicationDetails = (application) => {
     const data = application.submitted_details;
     if (!data || typeof data !== 'object') return <span className={styles.mutedText}>No details</span>;
@@ -165,6 +255,11 @@ const ManagerDashboard = () => {
         </div>
       </details>
     );
+  };
+
+  const getApplicationCandidateName = (application) => {
+    const values = application?.submitted_details?.values || {};
+    return values.fullName || values.displayName || application.user_display_name || application.user_name || 'N/A';
   };
 
   const tableLoading = loading ? <div className={styles.loading}><div className={styles.spinner}></div></div> : null;
@@ -264,12 +359,38 @@ const ManagerDashboard = () => {
       return (
         <div className={styles.card}>
           <h3>Applications</h3>
-          <table className={styles.table}><thead><tr><th>Job</th><th>Candidate</th><th>Email</th><th>Status</th><th>Action</th></tr></thead>
-            <tbody>{applications.length === 0 ? <tr><td colSpan="5" className={styles.empty}>No applications found</td></tr> : applications.map((a) => (
+          <div className={styles.toolbarRow}>
+            <select value={atsJobId} onChange={(e) => setAtsJobId(e.target.value)}>
+              <option value="">Select Job For ATS</option>
+              {applicationJobs.map((job) => (
+                <option key={job.job_id} value={job.job_id}>{job.job_title}</option>
+              ))}
+            </select>
+            <input
+              type="number"
+              min="1"
+              value={atsShortlistCount}
+              onChange={(e) => setAtsShortlistCount(Math.max(1, Number(e.target.value) || 2))}
+              placeholder="Shortlist Count"
+            />
+            <button type="button" className={styles.btnPrimary} disabled={saving || !atsJobId} onClick={runAtsShortlist}>
+              ATS Shortlist Top {atsShortlistCount}
+            </button>
+          </div>
+          <table className={styles.table}><thead><tr><th>Job</th><th>Candidate</th><th>Email</th><th>ATS Score</th><th>Status</th><th>Action</th></tr></thead>
+            <tbody>{applications.length === 0 ? <tr><td colSpan="6" className={styles.empty}>No applications found</td></tr> : applications.map((a) => (
               <tr key={a.id}>
                 <td>{a.job_title}</td>
-                <td>{a.user_name}{renderApplicationDetails(a)}</td>
+                <td>{getApplicationCandidateName(a)}{renderApplicationDetails(a)}</td>
                 <td>{a.user_email}</td>
+                <td>
+                  {atsScores[a.id] ? (
+                    <div>
+                      <strong>{atsScores[a.id].score}%</strong>
+                      <p className={styles.mutedText}>{atsScores[a.id].reason}</p>
+                    </div>
+                  ) : 'N/A'}
+                </td>
                 <td>{a.status}</td>
                 <td><div className={styles.actionsRow}>
                   <button type="button" className={styles.btnSuccess} disabled={saving || a.status === 'selected'} onClick={() => withSave(() => managerAPI.updateApplicationStatus(a.id, 'selected'), 'Failed to shortlist')}>Shortlist</button>

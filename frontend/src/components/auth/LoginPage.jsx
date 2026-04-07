@@ -34,8 +34,8 @@ const LoginPage = () => {
 
         <div className={styles.demoBox}>
           <p><strong>Demo Credentials</strong></p>
-          <p>Admin: admin@hirehub.com / admin123</p>
           <p>Manager: manager@hirehub.com / Manager12</p>
+          <p>User: irfanshaikmohammad1@gmail.com / User@123</p>
         </div>
         
         {error && <div className={styles.alert}>{error}</div>}

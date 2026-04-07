@@ -23,9 +23,9 @@ ON CONFLICT DO NOTHING;
 -- Insert Sample Users
 INSERT INTO users (name, email, password, role)
 VALUES 
-  ('John Developer', 'john@example.com', '$2a$10$Y0sH.XH9KGt8V9Z6ZrzM.O7ZI8NxJH9Z6C6V4R3D7Q8F8K6Y9E7Z6', 'admin'),
-  ('Sarah Designer', 'sarah@example.com', '$2a$10$Y0sH.XH9KGt8V9Z6ZrzM.O7ZI8NxJH9Z6C6V4R3D7Q8F8K6Y9E7Z6', 'admin'),
-  ('Michael Manager', 'michael@example.com', '$2a$10$Y0sH.XH9KGt8V9Z6ZrzM.O7ZI8NxJH9Z6C6V4R3D7Q8F8K6Y9E7Z6', 'admin'),
+  ('John Developer', 'john@example.com', '$2b$10$X7GmPbLh6asS4x3x0f5d8efkUFYRPuA9G0J0rXGXNq35p3xNmPR9G', 'user'),
+  ('Sarah Designer', 'sarah@example.com', '$2b$10$X7GmPbLh6asS4x3x0f5d8efkUFYRPuA9G0J0rXGXNq35p3xNmPR9G', 'user'),
+  ('Michael Manager', 'michael@example.com', '$2b$10$X7GmPbLh6asS4x3x0f5d8efkUFYRPuA9G0J0rXGXNq35p3xNmPR9G', 'user'),
   ('Portal Manager', 'manager@hirehub.com', '$2b$10$tjv/DCqxM6Hc4gCxymyOyOyqlYKPyvGVTiy8R/x7o4BvjCd1AMyju', 'manager')
 ON CONFLICT (email) DO NOTHING;
 
@@ -41,13 +41,22 @@ ON CONFLICT DO NOTHING;
 
 -- Insert Sample Applications
 INSERT INTO applications (job_id, user_id, status)
-VALUES 
-  (1, 2, 'applied'),
-  (1, 3, 'selected'),
-  (2, 2, 'applied'),
-  (3, 3, 'rejected'),
-  (5, 2, 'applied')
-ON CONFLICT DO NOTHING;
+SELECT j.id, u.id, v.status
+FROM (
+  VALUES
+    ('Senior Full Stack Developer', 'john@example.com', 'applied'),
+    ('Senior Full Stack Developer', 'sarah@example.com', 'selected'),
+    ('Frontend Developer', 'john@example.com', 'applied'),
+    ('UI/UX Designer', 'sarah@example.com', 'rejected'),
+    ('SEO Specialist', 'michael@example.com', 'applied')
+) AS v(job_title, user_email, status)
+JOIN jobs j ON j.title = v.job_title
+JOIN users u ON u.email = v.user_email
+WHERE NOT EXISTS (
+  SELECT 1
+  FROM applications a
+  WHERE a.job_id = j.id AND a.user_id = u.id
+);
 
 -- Insert Sample Subscriptions
 INSERT INTO subscriptions (company_id, plan_name, amount, payment_date, expiry_date, status)
@@ -60,7 +69,18 @@ ON CONFLICT DO NOTHING;
 
 -- Insert Manager Test Links
 INSERT INTO manager_test_links (application_id, job_id, candidate_email, link_url, notes, link_status, created_by, updated_by)
-VALUES
-  (1, 1, 'john@example.com', 'https://tests.hirehub.com/assessment/001', 'Initial coding assessment link', 'sent', 4, 4),
-  (2, 1, 'sarah@example.com', 'https://tests.hirehub.com/assessment/002', 'UI review assignment', 'completed', 4, 4)
-ON CONFLICT DO NOTHING;
+SELECT a.id, j.id, u.email, v.link_url, v.notes, v.link_status, manager_user.id, manager_user.id
+FROM (
+  VALUES
+    ('Senior Full Stack Developer', 'john@example.com', 'https://tests.hirehub.com/assessment/001', 'Initial coding assessment link', 'sent'),
+    ('Senior Full Stack Developer', 'sarah@example.com', 'https://tests.hirehub.com/assessment/002', 'UI review assignment', 'completed')
+) AS v(job_title, user_email, link_url, notes, link_status)
+JOIN jobs j ON j.title = v.job_title
+JOIN users u ON u.email = v.user_email
+JOIN applications a ON a.job_id = j.id AND a.user_id = u.id
+JOIN users manager_user ON manager_user.email = 'manager@hirehub.com'
+WHERE NOT EXISTS (
+  SELECT 1
+  FROM manager_test_links tl
+  WHERE tl.application_id = a.id AND tl.link_url = v.link_url
+);

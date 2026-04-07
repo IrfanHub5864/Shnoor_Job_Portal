@@ -1,5 +1,6 @@
 const pool = require('../config/database');
 const User = require('../models/User');
+const UserProfile = require('../models/UserProfile');
 const Job = require('../models/Job');
 const Company = require('../models/Company');
 const Application = require('../models/Application');
@@ -38,6 +39,69 @@ const normalizeCustomFormFields = (fields) => {
       };
     })
     .filter(Boolean);
+};
+
+const toKeywordSet = (...parts) => {
+  const text = parts
+    .flat(Infinity)
+    .filter(Boolean)
+    .map((value) => (typeof value === 'string' ? value : JSON.stringify(value)))
+    .join(' ')
+    .toLowerCase();
+
+  return new Set(
+    text
+      .replace(/[^a-z0-9\s]/g, ' ')
+      .split(/\s+/)
+      .filter((token) => token.length > 2)
+  );
+};
+
+const calculateAtsScore = ({ job, application, profile }) => {
+  const jobKeywords = toKeywordSet(
+    job.title,
+    job.description,
+    job.location,
+    job.manager_instructions,
+    job.custom_form_fields,
+    application.submitted_details?.labels
+  );
+
+  const candidateKeywords = toKeywordSet(
+    profile.displayName,
+    profile.headline,
+    profile.basicDetails?.professionalSummary,
+    profile.basicDetails?.currentLocation,
+    profile.basicDetails?.preferredLocation,
+    profile.skills,
+    profile.subsets,
+    profile.languages,
+    profile.projects,
+    profile.workExperience,
+    profile.internships,
+    application.submitted_details,
+    application.user_resume_url
+  );
+
+  const overlap = [...jobKeywords].filter((keyword) => candidateKeywords.has(keyword));
+  const overlapRatio = jobKeywords.size ? overlap.length / jobKeywords.size : 0;
+
+  let score = Math.round(overlapRatio * 70);
+  if (profile.resumeUrl || application.user_resume_url) {
+    score += 15;
+  }
+  if ((profile.skills || []).length) {
+    score += 10;
+  }
+  if ((profile.projects || []).length || (profile.workExperience || []).length || (profile.internships || []).length) {
+    score += 5;
+  }
+
+  return {
+    score: Math.max(0, Math.min(100, score)),
+    matchedKeywords: overlap.slice(0, 8),
+    hasResume: Boolean(profile.resumeUrl || application.user_resume_url)
+  };
 };
 
 const getProfile = async (req, res) => {
@@ -353,6 +417,81 @@ const shortlistAndSendTestLink = async (req, res) => {
     });
   } catch (error) {
     return res.status(500).json({ message: 'Error shortlisting candidate and sending test link', error: error.message });
+  }
+};
+
+const atsShortlistApplications = async (req, res) => {
+  try {
+    const jobId = Number(req.params.id);
+    const shortlistCount = Math.max(1, Number(req.body.shortlistCount) || 2);
+
+    if (Number.isNaN(jobId)) {
+      return res.status(400).json({ message: 'Invalid job id' });
+    }
+
+    const jobs = await Job.getAll();
+    const job = jobs.find((item) => Number(item.id) === jobId);
+    if (!job) {
+      return res.status(404).json({ message: 'Job not found' });
+    }
+
+    const applications = (await Application.getAll()).filter((item) => Number(item.job_id) === jobId);
+    if (!applications.length) {
+      return res.status(404).json({ message: 'No applications found for this job' });
+    }
+
+    const rankedApplications = [];
+    for (const application of applications) {
+      const user = await User.findById(application.user_id);
+      if (!user) {
+        rankedApplications.push({
+          ...application,
+          atsScore: 0,
+          atsMatchedKeywords: [],
+          atsReason: 'User profile not available'
+        });
+        continue;
+      }
+
+      const profile = await UserProfile.getByUserId(user);
+      const ats = calculateAtsScore({ job, application, profile });
+      rankedApplications.push({
+        ...application,
+        atsScore: ats.score,
+        atsMatchedKeywords: ats.matchedKeywords,
+        atsReason: ats.matchedKeywords.length
+          ? `Matched: ${ats.matchedKeywords.join(', ')}`
+          : (ats.hasResume ? 'Resume available, limited keyword match' : 'Limited match found')
+      });
+    }
+
+    rankedApplications.sort((left, right) => right.atsScore - left.atsScore || new Date(left.applied_at) - new Date(right.applied_at));
+
+    const shortlisted = [];
+    for (const application of rankedApplications.slice(0, shortlistCount)) {
+      const updatedApplication = application.status === 'selected'
+        ? application
+        : await Application.updateStatus(application.id, 'selected');
+
+      shortlisted.push({
+        ...application,
+        status: updatedApplication.status
+      });
+
+      await ActivityLog.record('Manager ATS Shortlisted Candidate', 'application', application.id);
+    }
+
+    return res.status(200).json({
+      message: `ATS shortlisted top ${shortlisted.length} application(s) successfully`,
+      data: {
+        jobId,
+        shortlistCount: shortlisted.length,
+        shortlisted,
+        rankedApplications
+      }
+    });
+  } catch (error) {
+    return res.status(500).json({ message: 'Error running ATS shortlist', error: error.message });
   }
 };
 
@@ -762,6 +901,7 @@ module.exports = {
   getManagerApplications,
   updateManagerApplicationStatus,
   shortlistAndSendTestLink,
+  atsShortlistApplications,
   getTestLinks,
   createTestLink,
   updateTestLink,

@@ -103,6 +103,7 @@ export const managerAPI = {
   getApplications: () => api.get('/manager/applications'),
   updateApplicationStatus: (id, status) => api.put(`/manager/applications/${id}/status`, { status }),
   shortlistAndSendTestLink: (id, data) => api.post(`/manager/applications/${id}/shortlist-test`, data),
+  atsShortlistApplications: (jobId, data) => api.post(`/manager/jobs/${jobId}/ats-shortlist`, data),
 
   getTestLinks: () => api.get('/manager/test-links'),
   createTestLink: (data) => api.post('/manager/test-links', data),

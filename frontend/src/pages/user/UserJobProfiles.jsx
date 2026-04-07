@@ -9,6 +9,70 @@ const formatSalary = (min, max) => {
   return `$${Number(min || max).toLocaleString()}`;
 };
 
+const APPLY_MODE_LABELS = {
+  direct_profile: 'Send Directly',
+  predefined_form: 'Add Form',
+  google_form: 'Google Form Link',
+  custom_form: 'Website Custom Form'
+};
+
+const getPredefinedFields = (key) => {
+  if (key === 'developer_screening') {
+    return [
+      { key: 'fullName', label: 'Full Name', type: 'text', required: true },
+      { key: 'email', label: 'Email', type: 'email', required: true },
+      { key: 'phone', label: 'Phone Number', type: 'text', required: true },
+      { key: 'primaryLanguage', label: 'Primary Programming Language', type: 'text', required: true },
+      { key: 'githubUrl', label: 'GitHub URL', type: 'text', required: false },
+      { key: 'portfolioUrl', label: 'Portfolio URL', type: 'text', required: false },
+      { key: 'resumeUrl', label: 'Resume URL', type: 'text', required: true },
+      { key: 'coverLetter', label: 'Why should we hire you?', type: 'textarea', required: false }
+    ];
+  }
+
+  return [
+    { key: 'fullName', label: 'Full Name', type: 'text', required: true },
+    { key: 'email', label: 'Email', type: 'email', required: true },
+    { key: 'phone', label: 'Phone Number', type: 'text', required: true },
+    { key: 'currentLocation', label: 'Current Location', type: 'text', required: true },
+    { key: 'experienceYears', label: 'Total Experience (Years)', type: 'number', required: true },
+    { key: 'skills', label: 'Top Skills', type: 'textarea', required: true },
+    { key: 'resumeUrl', label: 'Resume URL', type: 'text', required: true }
+  ];
+};
+
+const buildFallbackFormConfig = (job) => {
+  const applyMode = job.apply_mode || 'direct_profile';
+  let formFields = [];
+
+  if (applyMode === 'predefined_form') {
+    formFields = getPredefinedFields(job.predefined_form_key || 'basic_screening');
+  } else if (applyMode === 'custom_form') {
+    formFields = Array.isArray(job.custom_form_fields) ? job.custom_form_fields : [];
+  } else if (applyMode === 'direct_profile') {
+    formFields = [
+      { key: 'fullName', label: 'Full Name', type: 'text', required: true },
+      { key: 'email', label: 'Email', type: 'email', required: true },
+      { key: 'phone', label: 'Phone Number', type: 'text', required: true },
+      { key: 'currentLocation', label: 'Current Location', type: 'text', required: false },
+      { key: 'skills', label: 'Skills', type: 'textarea', required: false },
+      { key: 'resumeUrl', label: 'Resume URL', type: 'text', required: true }
+    ];
+  }
+
+  return {
+    jobId: job.id,
+    jobTitle: job.title,
+    companyName: job.company_name,
+    applyMode,
+    applyModeLabel: APPLY_MODE_LABELS[applyMode] || 'Send Directly',
+    managerInstructions: job.manager_instructions || '',
+    googleFormUrl: job.google_form_url || '',
+    formFields,
+    prefilledDetails: {}
+  };
+};
+
 const renderFieldInput = (field, value, onChange) => {
   const commonProps = {
     value: value || '',
@@ -69,15 +133,29 @@ const UserJobProfiles = () => {
         googleConfirmed: false
       });
     } catch (err) {
+      const routeMissing = err.response?.status === 404 && err.response?.data?.message === 'Route not found';
+      if (!routeMissing) {
+        setModal({
+          open: false,
+          loading: false,
+          job: null,
+          formConfig: null,
+          formValues: {},
+          googleConfirmed: false
+        });
+        setError(err.response?.data?.message || 'Unable to open application form');
+        return;
+      }
+
+      const fallbackConfig = buildFallbackFormConfig(job);
       setModal({
-        open: false,
+        open: true,
         loading: false,
-        job: null,
-        formConfig: null,
-        formValues: {},
+        job,
+        formConfig: fallbackConfig,
+        formValues: fallbackConfig.prefilledDetails || {},
         googleConfirmed: false
       });
-      setError(err.response?.data?.message || 'Unable to open application form');
     }
   };
 
