@@ -2,26 +2,26 @@ BEGIN;
 
 INSERT INTO companies (id, name, owner_id, email, phone, website, description, status, created_at, updated_at)
 VALUES
-  (2, 'Nova Tech Labs', 1, 'hello@novatech.com', '+1 (555) 010-0002', 'https://novatech.com', 'Cloud and AI software studio', 'approved', '2025-10-15 09:00:00', '2025-10-15 09:00:00'),
-  (3, 'Vertex Careers', 1, 'contact@vertexcareers.com', '+1 (555) 010-0003', 'https://vertexcareers.com', 'Recruitment and staffing firm', 'pending', '2025-11-01 10:00:00', '2025-11-01 10:00:00'),
-  (4, 'BrightPath Digital', 1, 'team@brightpath.com', '+1 (555) 010-0004', 'https://brightpath.com', 'Digital products and UX agency', 'rejected', '2025-12-07 11:30:00', '2025-12-07 11:30:00'),
-  (5, 'Summit Cloud Systems', 1, 'info@summitcloud.com', '+1 (555) 010-0005', 'https://summitcloud.com', 'Cloud architecture consultancy', 'blocked', '2026-01-12 12:45:00', '2026-01-12 12:45:00'),
-  (6, 'BluePeak Solutions', 1, 'hello@bluepeak.com', '+1 (555) 010-0006', 'https://bluepeak.com', 'Enterprise software delivery', 'approved', '2026-02-18 09:30:00', '2026-02-18 09:30:00')
+  (2, 'Nova Tech Labs', 2, 'hello@novatech.com', '+1 (555) 010-0002', 'https://novatech.com', 'Cloud and AI software studio', 'approved', '2025-10-15 09:00:00', '2025-10-15 09:00:00'),
+  (3, 'Vertex Careers', 3, 'contact@vertexcareers.com', '+1 (555) 010-0003', 'https://vertexcareers.com', 'Recruitment and staffing firm', 'pending', '2025-11-01 10:00:00', '2025-11-01 10:00:00'),
+  (4, 'BrightPath Digital', 4, 'team@brightpath.com', '+1 (555) 010-0004', 'https://brightpath.com', 'Digital products and UX agency', 'rejected', '2025-12-07 11:30:00', '2025-12-07 11:30:00'),
+  (5, 'Summit Cloud Systems', 5, 'info@summitcloud.com', '+1 (555) 010-0005', 'https://summitcloud.com', 'Cloud architecture consultancy', 'blocked', '2026-01-12 12:45:00', '2026-01-12 12:45:00'),
+  (6, 'BluePeak Solutions', 6, 'hello@bluepeak.com', '+1 (555) 010-0006', 'https://bluepeak.com', 'Enterprise software delivery', 'approved', '2026-02-18 09:30:00', '2026-02-18 09:30:00')
 ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO users (id, name, email, password, role, is_blocked, created_at, updated_at)
 VALUES
-  (2, 'Ava Patel', 'ava.patel@hirehub.com', '$2a$10$u5fy9pSfSrmpywXZoWBohuReJJU65k68pjo0NdQdioVUxx0oHlJXy', 'admin', FALSE, '2025-10-01 08:00:00', '2025-10-01 08:00:00'),
-  (3, 'Noah Kim', 'noah.kim@hirehub.com', '$2a$10$u5fy9pSfSrmpywXZoWBohuReJJU65k68pjo0NdQdioVUxx0oHlJXy', 'admin', FALSE, '2025-10-20 08:00:00', '2025-10-20 08:00:00'),
-  (4, 'Mia Johnson', 'mia.johnson@hirehub.com', '$2a$10$u5fy9pSfSrmpywXZoWBohuReJJU65k68pjo0NdQdioVUxx0oHlJXy', 'admin', TRUE, '2025-11-03 08:00:00', '2025-11-03 08:00:00'),
-  (5, 'Ethan Brown', 'ethan.brown@hirehub.com', '$2a$10$u5fy9pSfSrmpywXZoWBohuReJJU65k68pjo0NdQdioVUxx0oHlJXy', 'admin', FALSE, '2025-11-18 08:00:00', '2025-11-18 08:00:00'),
-  (6, 'Sophia Wilson', 'sophia.wilson@hirehub.com', '$2a$10$u5fy9pSfSrmpywXZoWBohuReJJU65k68pjo0NdQdioVUxx0oHlJXy', 'admin', FALSE, '2025-12-02 08:00:00', '2025-12-02 08:00:00'),
-  (7, 'Liam Davis', 'liam.davis@hirehub.com', '$2a$10$u5fy9pSfSrmpywXZoWBohuReJJU65k68pjo0NdQdioVUxx0oHlJXy', 'admin', TRUE, '2025-12-15 08:00:00', '2025-12-15 08:00:00'),
-  (8, 'Olivia Martinez', 'olivia.martinez@hirehub.com', '$2a$10$u5fy9pSfSrmpywXZoWBohuReJJU65k68pjo0NdQdioVUxx0oHlJXy', 'admin', FALSE, '2026-01-08 08:00:00', '2026-01-08 08:00:00'),
-  (9, 'James Taylor', 'james.taylor@hirehub.com', '$2a$10$u5fy9pSfSrmpywXZoWBohuReJJU65k68pjo0NdQdioVUxx0oHlJXy', 'admin', FALSE, '2026-01-22 08:00:00', '2026-01-22 08:00:00'),
-  (10, 'Isabella Moore', 'isabella.moore@hirehub.com', '$2a$10$u5fy9pSfSrmpywXZoWBohuReJJU65k68pjo0NdQdioVUxx0oHlJXy', 'admin', FALSE, '2026-02-04 08:00:00', '2026-02-04 08:00:00'),
-  (11, 'Benjamin Clark', 'benjamin.clark@hirehub.com', '$2a$10$u5fy9pSfSrmpywXZoWBohuReJJU65k68pjo0NdQdioVUxx0oHlJXy', 'admin', TRUE, '2026-02-19 08:00:00', '2026-02-19 08:00:00'),
-  (12, 'Charlotte Lewis', 'charlotte.lewis@hirehub.com', '$2a$10$u5fy9pSfSrmpywXZoWBohuReJJU65k68pjo0NdQdioVUxx0oHlJXy', 'admin', FALSE, '2026-03-05 08:00:00', '2026-03-05 08:00:00')
+  (2, 'Ava Patel', 'ava.patel@novatech.com', '$2a$10$u5fy9pSfSrmpywXZoWBohuReJJU65k68pjo0NdQdioVUxx0oHlJXy', 'company_manager', FALSE, '2025-10-01 08:00:00', '2025-10-01 08:00:00'),
+  (3, 'Noah Kim', 'noah.kim@vertexcareers.com', '$2a$10$u5fy9pSfSrmpywXZoWBohuReJJU65k68pjo0NdQdioVUxx0oHlJXy', 'company_manager', FALSE, '2025-10-20 08:00:00', '2025-10-20 08:00:00'),
+  (4, 'Mia Johnson', 'mia.johnson@brightpath.com', '$2a$10$u5fy9pSfSrmpywXZoWBohuReJJU65k68pjo0NdQdioVUxx0oHlJXy', 'company_manager', TRUE, '2025-11-03 08:00:00', '2025-11-03 08:00:00'),
+  (5, 'Ethan Brown', 'ethan.brown@summitcloud.com', '$2a$10$u5fy9pSfSrmpywXZoWBohuReJJU65k68pjo0NdQdioVUxx0oHlJXy', 'company_manager', FALSE, '2025-11-18 08:00:00', '2025-11-18 08:00:00'),
+  (6, 'Sophia Wilson', 'sophia.wilson@bluepeak.com', '$2a$10$u5fy9pSfSrmpywXZoWBohuReJJU65k68pjo0NdQdioVUxx0oHlJXy', 'company_manager', FALSE, '2025-12-02 08:00:00', '2025-12-02 08:00:00'),
+  (7, 'Liam Davis', 'liam.davis@shnoorjobs.com', '$2a$10$u5fy9pSfSrmpywXZoWBohuReJJU65k68pjo0NdQdioVUxx0oHlJXy', 'user', TRUE, '2025-12-15 08:00:00', '2025-12-15 08:00:00'),
+  (8, 'Olivia Martinez', 'olivia.martinez@shnoorjobs.com', '$2a$10$u5fy9pSfSrmpywXZoWBohuReJJU65k68pjo0NdQdioVUxx0oHlJXy', 'user', FALSE, '2026-01-08 08:00:00', '2026-01-08 08:00:00'),
+  (9, 'James Taylor', 'james.taylor@shnoorjobs.com', '$2a$10$u5fy9pSfSrmpywXZoWBohuReJJU65k68pjo0NdQdioVUxx0oHlJXy', 'user', FALSE, '2026-01-22 08:00:00', '2026-01-22 08:00:00'),
+  (10, 'Isabella Moore', 'isabella.moore@shnoorjobs.com', '$2a$10$u5fy9pSfSrmpywXZoWBohuReJJU65k68pjo0NdQdioVUxx0oHlJXy', 'user', FALSE, '2026-02-04 08:00:00', '2026-02-04 08:00:00'),
+  (11, 'Benjamin Clark', 'benjamin.clark@shnoorjobs.com', '$2a$10$u5fy9pSfSrmpywXZoWBohuReJJU65k68pjo0NdQdioVUxx0oHlJXy', 'user', TRUE, '2026-02-19 08:00:00', '2026-02-19 08:00:00'),
+  (12, 'Charlotte Lewis', 'charlotte.lewis@shnoorjobs.com', '$2a$10$u5fy9pSfSrmpywXZoWBohuReJJU65k68pjo0NdQdioVUxx0oHlJXy', 'user', FALSE, '2026-03-05 08:00:00', '2026-03-05 08:00:00')
 ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO jobs (id, company_id, title, description, salary_min, salary_max, location, status, created_at, updated_at)

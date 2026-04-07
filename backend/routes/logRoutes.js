@@ -1,9 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const { getAllLogs } = require('../controllers/logsController');
-const { authenticateAdmin } = require('../middleware/authMiddleware');
+const { authenticateSuperAdmin } = require('../middleware/authMiddleware');
 
-router.use(authenticateAdmin);
+router.use(authenticateSuperAdmin);
 
 router.get('/', getAllLogs);
 

@@ -57,6 +57,13 @@
   border-radius: 8px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   overflow: hidden;
+  border: 1px solid #e7edf3;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.table {
+  min-width: 760px;
 }
 
 .tableContainer h3 {
@@ -92,6 +99,7 @@
   border-bottom: 1px solid #e0e0e0;
   color: #333;
   font-size: 14px;
+  vertical-align: middle;
 }
 
 .table tbody tr:hover {
@@ -106,13 +114,23 @@
 
 .role {
   display: inline-block;
-  background-color: #0066cc;
   color: white;
-  padding: 4px 8px;
-  border-radius: 4px;
+  padding: 5px 10px;
+  border-radius: 999px;
   font-size: 12px;
   font-weight: 600;
-  text-transform: uppercase;
+}
+
+.roleSuperAdmin {
+  background: linear-gradient(135deg, #7a3ef0, #5b21b6);
+}
+
+.roleCompanyManager {
+  background: linear-gradient(135deg, #1d4ed8, #2563eb);
+}
+
+.roleUser {
+  background: linear-gradient(135deg, #14824a, #22a06b);
 }
 
 .badge {
@@ -135,9 +153,9 @@
 
 .btnSuccess,
 .btnDanger {
-  padding: 6px 12px;
+  padding: 8px 14px;
   border: none;
-  border-radius: 4px;
+  border-radius: 999px;
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
@@ -168,12 +186,30 @@ button:disabled {
 }
 
 @media (max-width: 768px) {
+  .tableContainer h3 {
+    padding: 16px;
+  }
+
   .table {
     font-size: 12px;
   }
 
   .table th,
   .table td {
+    padding: 10px 12px;
+  }
+
+  .filtersBar {
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+
+  .filterGroup label {
+    font-size: 12px;
+  }
+
+  .searchInput,
+  .select {
     padding: 10px 12px;
   }
 

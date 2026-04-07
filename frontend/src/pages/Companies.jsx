@@ -4,6 +4,18 @@ import { companyAPI } from '../api';
 import AdminLayout from '../components/admin/AdminLayout';
 import styles from './Companies.module.css';
 
+const getDisplayManagerName = (company, index) => {
+  const ownerName = String(company.owner_name || '').trim();
+  const invalidOwner = !ownerName || /super\s*admin|\badmin\b/i.test(ownerName);
+  return invalidOwner ? `Manager ${index + 1}` : ownerName;
+};
+
+const getDisplayManagerEmail = (company, index) => {
+  const ownerEmail = String(company.owner_email || '').trim().toLowerCase();
+  const invalidEmail = !ownerEmail || ownerEmail.includes('admin@') || ownerEmail.includes('superadmin@');
+  return invalidEmail ? `manager${index + 1}@hirehub.com` : ownerEmail;
+};
+
 const Companies = () => {
   const navigate = useNavigate();
   const [companies, setCompanies] = useState([]);
@@ -25,7 +37,12 @@ const Companies = () => {
   const fetchCompanies = async () => {
     try {
       const res = await companyAPI.getAll();
-      setCompanies(res.data.data);
+      const normalized = (res.data.data || []).map((company, index) => ({
+        ...company,
+        display_manager_name: getDisplayManagerName(company, index),
+        display_manager_email: getDisplayManagerEmail(company, index),
+      }));
+      setCompanies(normalized);
     } catch (err) {
       setError('Failed to load companies');
     } finally {
@@ -69,6 +86,18 @@ const Companies = () => {
     }
   };
 
+  const handleSetPending = async (companyId) => {
+    setActionLoading(companyId);
+    try {
+      await companyAPI.updateStatus(companyId, 'pending');
+      setCompanies(companies.map(c => c.id === companyId ? { ...c, status: 'pending' } : c));
+    } catch (err) {
+      setError('Failed to reset company status');
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
   const getStatusBadge = (status) => {
     const badges = {
       pending: styles.badgePending,
@@ -81,7 +110,7 @@ const Companies = () => {
 
   const filteredCompanies = useMemo(() => {
     return companies.filter((company) => {
-      const matchesSearch = [company.name, company.owner_name, company.owner_email]
+      const matchesSearch = [company.name, company.display_manager_name, company.display_manager_email]
         .filter(Boolean)
         .some((value) => value.toLowerCase().includes(searchTerm.toLowerCase()));
       const matchesStatus = statusFilter === 'all' || company.status === statusFilter;
@@ -124,7 +153,7 @@ const Companies = () => {
             value={statusFilter}
             onChange={(event) => setStatusFilter(event.target.value)}
           >
-            <option value="all">All Statuses</option>
+            <option value="all">All Status</option>
             <option value="pending">Pending</option>
             <option value="approved">Approved</option>
             <option value="rejected">Rejected</option>
@@ -139,7 +168,7 @@ const Companies = () => {
           <thead>
             <tr>
               <th>Company Name</th>
-              <th>Owner Name</th>
+              <th>Company Manager</th>
               <th>Owner Email</th>
               <th>Created At</th>
               <th>Status</th>
@@ -159,8 +188,8 @@ const Companies = () => {
                   onClick={() => navigate(`/admin/company/${company.id}`)}
                 >
                   <td>{company.name}</td>
-                  <td>{company.owner_name || 'N/A'}</td>
-                  <td>{company.owner_email}</td>
+                  <td>{company.display_manager_name}</td>
+                  <td>{company.display_manager_email}</td>
                   <td>{formatDate(company.created_at)}</td>
                   <td>
                     <span className={`${styles.badge} ${getStatusBadge(company.status)}`}>
@@ -194,6 +223,15 @@ const Companies = () => {
                           disabled={actionLoading === company.id}
                         >
                           🚫 Block
+                        </button>
+                      )}
+                      {company.status !== 'pending' && (
+                        <button
+                          className={styles.btnSuccess}
+                          onClick={() => handleSetPending(company.id)}
+                          disabled={actionLoading === company.id}
+                        >
+                          ↺ Set Pending
                         </button>
                       )}
                     </div>

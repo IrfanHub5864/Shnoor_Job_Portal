@@ -1,12 +1,15 @@
 import styles from './OpeningPage.module.css';
+import { useSettings } from '../../context/SettingsContext';
 
 const OpeningPage = ({ onGetStarted, onLogin, onRegister }) => {
+  const { settings } = useSettings();
+
   return (
     <div className={styles.container}>
       <div className={styles.content}>
         {/* Logo and Title */}
         <div className={styles.header}>
-          <h1 className={styles.logo}>HireHub</h1>
+          <h1 className={styles.logo}>{settings.platform_name || 'HireHub'}</h1>
           <p className={styles.tagline}>Your next job starts here</p>
         </div>
 

@@ -106,7 +106,7 @@ const Jobs = () => {
             value={statusFilter}
             onChange={(event) => setStatusFilter(event.target.value)}
           >
-            <option value="all">All Statuses</option>
+            <option value="all">All Status</option>
             <option value="open">Open</option>
             <option value="closed">Closed</option>
           </select>

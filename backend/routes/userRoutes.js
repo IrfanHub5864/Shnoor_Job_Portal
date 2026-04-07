@@ -6,9 +6,9 @@ const {
   blockUser,
   unblockUser
 } = require('../controllers/userController');
-const { authenticateAdmin } = require('../middleware/authMiddleware');
+const { authenticateSuperAdmin } = require('../middleware/authMiddleware');
 
-router.use(authenticateAdmin);
+router.use(authenticateSuperAdmin);
 
 router.get('/', getAllUsers);
 router.get('/:id', getUserById);

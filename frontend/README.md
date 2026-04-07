@@ -51,7 +51,7 @@ The optimized build will be created in the `dist` folder.
 
 ### Opening Page
 - Clean, modern UI (non-scrollable)
-- "HireHub" branding
+- "Shnoor Job Portal" branding
 - Quick statistics (100+ Companies, 500+ Jobs, 1000+ Users)
 - Call-to-action buttons
 
@@ -153,7 +153,7 @@ All API calls are handled through `src/api.js`:
 After running seed data in backend:
 
 ```
-Email: admin@hirehub.com
+Email: superadmin@shnoorjobportal.com
 Password: admin123
 ```
 

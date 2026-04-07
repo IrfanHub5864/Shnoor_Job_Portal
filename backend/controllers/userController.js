@@ -38,6 +38,16 @@ const getUserById = async (req, res) => {
 const blockUser = async (req, res) => {
   try {
     const { id } = req.params;
+
+    const userToBlock = await User.findById(id);
+    if (!userToBlock) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    if (['superadmin', 'admin'].includes(String(userToBlock.role || '').toLowerCase())) {
+      return res.status(400).json({ message: 'Super admin cannot be blocked' });
+    }
+
     const updatedUser = await User.updateBlockStatus(id, true);
     await ActivityLog.record('Blocked User', 'user', id);
     

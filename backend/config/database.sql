@@ -10,7 +10,7 @@ CREATE TABLE users (
   name VARCHAR(100) NOT NULL,
   email VARCHAR(100) UNIQUE NOT NULL,
   password VARCHAR(255) NOT NULL,
-  role VARCHAR(50) NOT NULL DEFAULT 'admin',
+  role VARCHAR(50) NOT NULL DEFAULT 'user',
   is_blocked BOOLEAN DEFAULT FALSE,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -80,7 +80,7 @@ CREATE TABLE otp_verification (
 -- Settings Table
 CREATE TABLE settings (
   id SERIAL PRIMARY KEY,
-  platform_name VARCHAR(255) DEFAULT 'HireHub',
+  platform_name VARCHAR(255) DEFAULT 'Shnoor Job Portal',
   logo_url TEXT,
   company_email VARCHAR(100),
   company_phone VARCHAR(20),

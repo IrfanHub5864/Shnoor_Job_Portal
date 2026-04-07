@@ -7,6 +7,7 @@ const Subscriptions = () => {
   const [subscriptions, setSubscriptions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [actionLoading, setActionLoading] = useState(null);
 
   useEffect(() => {
     fetchSubscriptions();
@@ -27,9 +28,26 @@ const Subscriptions = () => {
     const badges = {
       active: styles.badgeActive,
       inactive: styles.badgeInactive,
-      expired: styles.badgeExpired,
     };
     return badges[status] || '';
+  };
+
+  const normalizeStatus = (status) => (status === 'active' ? 'active' : 'inactive');
+
+  const handleToggleStatus = async (subscriptionId, currentStatus) => {
+    const nextStatus = currentStatus === 'active' ? 'inactive' : 'active';
+    setActionLoading(subscriptionId);
+
+    try {
+      await subscriptionAPI.updateStatus(subscriptionId, nextStatus);
+      setSubscriptions(subscriptions.map((subscription) => (
+        subscription.id === subscriptionId ? { ...subscription, status: nextStatus } : subscription
+      )));
+    } catch (err) {
+      setError('Failed to update subscription status');
+    } finally {
+      setActionLoading(null);
+    }
   };
 
   const formatDate = (dateString) => {
@@ -62,12 +80,13 @@ const Subscriptions = () => {
               <th>Start Date</th>
               <th>Expiry Date</th>
               <th>Status</th>
+              <th>Actions</th>
             </tr>
           </thead>
           <tbody>
             {subscriptions.length === 0 ? (
               <tr>
-                <td colSpan="6" className={styles.empty}>No subscriptions found</td>
+                <td colSpan="7" className={styles.empty}>No subscriptions found</td>
               </tr>
             ) : (
               subscriptions.map(sub => (
@@ -78,9 +97,18 @@ const Subscriptions = () => {
                   <td>{formatDate(sub.start_date)}</td>
                   <td>{formatDate(sub.expiry_date)}</td>
                   <td>
-                    <span className={`${styles.badge} ${getStatusBadge(sub.status)}`}>
-                      {sub.status?.toUpperCase()}
+                    <span className={`${styles.badge} ${getStatusBadge(normalizeStatus(sub.status))}`}>
+                      {normalizeStatus(sub.status) === 'active' ? 'Active' : 'Inactive'}
                     </span>
+                  </td>
+                  <td>
+                    <button
+                      className={normalizeStatus(sub.status) === 'active' ? styles.btnDeactivate : styles.btnActivate}
+                      onClick={() => handleToggleStatus(sub.id, normalizeStatus(sub.status))}
+                      disabled={actionLoading === sub.id}
+                    >
+                      {normalizeStatus(sub.status) === 'active' ? 'Deactivate' : 'Activate'}
+                    </button>
                   </td>
                 </tr>
               ))

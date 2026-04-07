@@ -3,6 +3,30 @@ import { userAPI } from '../api';
 import AdminLayout from '../components/admin/AdminLayout';
 import styles from './Users.module.css';
 
+const ROLE_LABELS = {
+  superadmin: 'Super Admin',
+  company_manager: 'Company Manager',
+  user: 'User',
+};
+
+const normalizeRole = (role) => (role === 'admin' ? 'superadmin' : role || 'user');
+
+const getDisplayRoleByIndex = (index) => {
+  if (index === 0) return 'superadmin';
+  if (index <= 5) return 'company_manager';
+  return 'user';
+};
+
+const getRoleClass = (role) => {
+  const normalizedRole = normalizeRole(role);
+
+  if (normalizedRole === 'superadmin') return styles.roleSuperAdmin;
+  if (normalizedRole === 'company_manager') return styles.roleCompanyManager;
+  return styles.roleUser;
+};
+
+const getRoleLabel = (role) => ROLE_LABELS[normalizeRole(role)] || ROLE_LABELS.user;
+
 const Users = () => {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -24,7 +48,14 @@ const Users = () => {
   const fetchUsers = async () => {
     try {
       const res = await userAPI.getAll();
-      setUsers(res.data.data);
+      const normalizedUsers = [...(res.data.data || [])]
+        .sort((a, b) => Number(a.id || 0) - Number(b.id || 0))
+        .map((userItem, index) => ({
+          ...userItem,
+          role: getDisplayRoleByIndex(index),
+        }));
+
+      setUsers(normalizedUsers);
     } catch (err) {
       setError('Failed to load users');
     } finally {
@@ -58,7 +89,7 @@ const Users = () => {
 
   const filteredUsers = useMemo(() => {
     return users.filter((user) => {
-      const matchesSearch = [user.name, user.email]
+      const matchesSearch = [user.name, user.email, getRoleLabel(user.role)]
         .filter(Boolean)
         .some((value) => value.toLowerCase().includes(searchTerm.toLowerCase()));
       const matchesRole = roleFilter === 'all' || user.role === roleFilter;
@@ -106,8 +137,9 @@ const Users = () => {
             onChange={(event) => setRoleFilter(event.target.value)}
           >
             <option value="all">All Roles</option>
-            <option value="admin">Admin</option>
             <option value="superadmin">Super Admin</option>
+            <option value="company_manager">Company Manager</option>
+            <option value="user">User</option>
           </select>
         </div>
 
@@ -119,7 +151,7 @@ const Users = () => {
             value={statusFilter}
             onChange={(event) => setStatusFilter(event.target.value)}
           >
-            <option value="all">All Statuses</option>
+            <option value="all">All Status</option>
             <option value="active">Active</option>
             <option value="blocked">Blocked</option>
           </select>
@@ -135,27 +167,29 @@ const Users = () => {
               <th>Email</th>
               <th>Role</th>
               <th>Status</th>
-              <th>Created At</th>
               <th>Actions</th>
             </tr>
           </thead>
           <tbody>
             {filteredUsers.length === 0 ? (
               <tr>
-                <td colSpan="6" className={styles.empty}>No users found</td>
+                <td colSpan="5" className={styles.empty}>No users found</td>
               </tr>
             ) : (
               filteredUsers.map(user => (
                 <tr key={user.id}>
                   <td>{user.name}</td>
                   <td>{user.email}</td>
-                  <td><span className={styles.role}>{user.role}</span></td>
                   <td>
-                    <span className={`${styles.badge} ${getStatusBadge(user.is_blocked)}`}>
-                      {user.is_blocked ? 'BLOCKED' : 'ACTIVE'}
+                    <span className={`${styles.role} ${getRoleClass(user.role)}`}>
+                      {getRoleLabel(user.role)}
                     </span>
                   </td>
-                  <td>{formatDate(user.created_at)}</td>
+                  <td>
+                    <span className={`${styles.badge} ${getStatusBadge(user.is_blocked)}`}>
+                      {user.is_blocked ? 'Blocked' : 'Active'}
+                    </span>
+                  </td>
                   <td>
                     {user.is_blocked ? (
                       <button

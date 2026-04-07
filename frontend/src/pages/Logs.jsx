@@ -7,14 +7,15 @@ const Logs = () => {
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [entityFilter, setEntityFilter] = useState('all');
 
   useEffect(() => {
     fetchLogs();
-  }, []);
+  }, [entityFilter]);
 
   const fetchLogs = async () => {
     try {
-      const response = await logsAPI.getAll();
+      const response = await logsAPI.getAll({ entityFilter });
       setLogs(response.data.data);
     } catch (err) {
       setError('Failed to load activity logs');
@@ -52,7 +53,17 @@ const Logs = () => {
       {error && <div className={styles.alert}>{error}</div>}
 
       <div className={styles.tableContainer}>
-        <h3>Activity Logs</h3>
+        <div className={styles.tableHeader}>
+          <h3>Activity Logs</h3>
+          <div className={styles.filterWrap}>
+            <select id="entityFilter" value={entityFilter} onChange={(event) => setEntityFilter(event.target.value)}>
+              <option value="all">All</option>
+              <option value="user">Users</option>
+              <option value="company">Companies</option>
+              <option value="company_manager">Company Managers</option>
+            </select>
+          </div>
+        </div>
         <table className={styles.table}>
           <thead>
             <tr>

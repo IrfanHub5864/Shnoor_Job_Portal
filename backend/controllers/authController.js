@@ -5,7 +5,8 @@ const { hashPassword, comparePassword, generateToken, generateOTP, sendOTP } = r
 // Register
 const register = async (req, res) => {
   try {
-    const { name, email, password, role = 'admin' } = req.body;
+    const { name, email, password, role = 'user' } = req.body;
+    const normalizedRole = ['company_manager', 'user'].includes(role) ? role : 'user';
 
     if (!name || !email || !password) {
       return res.status(400).json({ message: 'Name, email, and password are required' });
@@ -17,7 +18,7 @@ const register = async (req, res) => {
     }
 
     const hashedPassword = await hashPassword(password);
-    const newUser = await User.create(name, email, hashedPassword, role);
+  const newUser = await User.create(name, email, hashedPassword, normalizedRole);
 
     res.status(201).json({
       message: 'User registered successfully',

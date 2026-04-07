@@ -66,7 +66,12 @@ export const dashboardAPI = {
 };
 
 export const logsAPI = {
-  getAll: () => api.get('/logs'),
+  getAll: (filters = {}) => api.get('/logs', { params: filters }),
+};
+
+export const settingsAPI = {
+  get: () => api.get('/settings'),
+  update: (payload) => api.put('/settings', payload),
 };
 
 export default api;

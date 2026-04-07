@@ -9,7 +9,7 @@ const RegisterPage = () => {
     email: '',
     password: '',
     confirmPassword: '',
-    role: 'admin'
+    role: 'user'
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -109,7 +109,8 @@ const RegisterPage = () => {
               value={formData.role}
               onChange={handleChange}
             >
-              <option value="admin">Admin</option>
+              <option value="user">User</option>
+              <option value="company_manager">Company Manager</option>
             </select>
           </div>
 

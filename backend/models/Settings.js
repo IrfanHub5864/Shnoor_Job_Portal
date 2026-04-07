@@ -19,7 +19,7 @@ class Settings {
     const query = `INSERT INTO settings (platform_name, company_email) 
                    VALUES ($1, $2) 
                    ON CONFLICT (id) DO NOTHING RETURNING *`;
-    const result = await pool.query(query, ['HireHub', 'admin@hirehub.com']);
+    const result = await pool.query(query, ['Shnoor Job Portal', 'support@shnoorjobportal.com']);
     return result.rows[0];
   }
 }

@@ -4,7 +4,7 @@ CREATE TABLE users (
   name VARCHAR(100) NOT NULL,
   email VARCHAR(100) UNIQUE NOT NULL,
   password VARCHAR(255) NOT NULL,
-  role VARCHAR(50) CHECK(role IN ('admin', 'superadmin')) DEFAULT 'admin',
+  role VARCHAR(50) CHECK(role IN ('superadmin', 'company_manager', 'user')) DEFAULT 'user',
   is_blocked BOOLEAN DEFAULT FALSE,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -81,6 +81,6 @@ CREATE INDEX idx_jobs_company_id ON jobs(company_id);
 CREATE INDEX idx_applications_job_id ON applications(job_id);
 CREATE INDEX idx_subscriptions_company_id ON subscriptions(company_id);
 
--- Insert admin user
+-- Insert super admin user
 INSERT INTO users (name, email, password, role) VALUES 
-('Super Admin', 'admin@hirehub.com', '$2b$10$7LhI6i6RJWZC4Y8.7q5Dte.G5Ws3H7.8K0M9N1O2P3Q4R5S6T7U8V9W', 'superadmin');
+('Super Admin', 'superadmin@shnoorjobportal.com', '$2b$10$7LhI6i6RJWZC4Y8.7q5Dte.G5Ws3H7.8K0M9N1O2P3Q4R5S6T7U8V9W', 'superadmin');

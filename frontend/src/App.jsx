@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { SettingsProvider } from './context/SettingsContext';
 
 // Pages
 import OpeningPage from './components/pages/OpeningPage';
@@ -10,12 +11,16 @@ import OTPVerificationPage from './components/auth/OTPVerificationPage';
 import Dashboard from './pages/Dashboard';
 import Companies from './pages/Companies';
 import Users from './pages/Users';
-import Jobs from './pages/Jobs';
-import Applications from './pages/Applications';
 import Subscriptions from './pages/Subscriptions';
 import Logs from './pages/Logs';
 import CompanyDetails from './pages/CompanyDetails';
 import Settings from './pages/Settings';
+import Profile from './pages/Profile';
+
+const normalizeRole = (role) => {
+  if (role === 'admin') return 'superadmin';
+  return role || 'user';
+};
 
 const ProtectedRoute = ({ children }) => {
   const { token, loading } = useAuth();
@@ -43,6 +48,36 @@ const ProtectedRoute = ({ children }) => {
   return token ? children : <Navigate to="/" replace />;
 };
 
+const SuperAdminRoute = ({ children }) => {
+  const { token, loading, user } = useAuth();
+
+  if (loading) {
+    return (
+      <div style={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        height: '100vh'
+      }}>
+        <div style={{
+          border: '4px solid #f0f2f5',
+          borderTop: '4px solid #0066cc',
+          borderRadius: '50%',
+          width: '40px',
+          height: '40px',
+          animation: 'spin 1s linear infinite'
+        }}></div>
+      </div>
+    );
+  }
+
+  if (!token) {
+    return <Navigate to="/" replace />;
+  }
+
+  return normalizeRole(user?.role) === 'superadmin' ? children : <Navigate to="/admin/dashboard" replace />;
+};
+
 const AppContent = () => {
   const { token } = useAuth();
 
@@ -60,6 +95,14 @@ const AppContent = () => {
           <ProtectedRoute>
             <Dashboard />
           </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/profile"
+        element={
+          <SuperAdminRoute>
+            <Profile />
+          </SuperAdminRoute>
         }
       />
       <Route
@@ -83,22 +126,6 @@ const AppContent = () => {
         element={
           <ProtectedRoute>
             <Users />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/admin/jobs"
-        element={
-          <ProtectedRoute>
-            <Jobs />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/admin/applications"
-        element={
-          <ProtectedRoute>
-            <Applications />
           </ProtectedRoute>
         }
       />
@@ -148,9 +175,11 @@ const OpeningPageWrapper = () => {
 export default function App() {
   return (
     <Router>
-      <AuthProvider>
-        <AppContent />
-      </AuthProvider>
+      <SettingsProvider>
+        <AuthProvider>
+          <AppContent />
+        </AuthProvider>
+      </SettingsProvider>
     </Router>
   );
 }

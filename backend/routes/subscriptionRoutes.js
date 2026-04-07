@@ -5,9 +5,9 @@ const {
   getSubscriptionById,
   updateSubscriptionStatus
 } = require('../controllers/subscriptionController');
-const { authenticateAdmin } = require('../middleware/authMiddleware');
+const { authenticateSuperAdmin } = require('../middleware/authMiddleware');
 
-router.use(authenticateAdmin);
+router.use(authenticateSuperAdmin);
 
 router.get('/', getAllSubscriptions);
 router.get('/:id', getSubscriptionById);

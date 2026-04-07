@@ -31,7 +31,7 @@ export const AuthProvider = ({ children }) => {
     return { userId: loginRes.data.userId, email: loginRes.data.email };
   };
 
-  const register = async (name, email, password, role = 'admin') => {
+  const register = async (name, email, password, role = 'user') => {
     return await authAPI.register({ name, email, password, role });
   };
 

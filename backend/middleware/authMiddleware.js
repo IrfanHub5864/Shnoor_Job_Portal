@@ -15,7 +15,7 @@ const authenticate = (req, res, next) => {
   }
 };
 
-const authenticateAdmin = (req, res, next) => {
+const authenticateSuperAdmin = (req, res, next) => {
   try {
     const token = req.headers.authorization?.split(' ')[1];
     if (!token) {
@@ -23,8 +23,8 @@ const authenticateAdmin = (req, res, next) => {
     }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    if (!['admin', 'superadmin'].includes(decoded.role)) {
-      return res.status(403).json({ message: 'Access denied. Admin only.' });
+    if (decoded.role !== 'superadmin') {
+      return res.status(403).json({ message: 'Access denied. Super Admin only.' });
     }
 
     req.user = decoded;
@@ -34,4 +34,4 @@ const authenticateAdmin = (req, res, next) => {
   }
 };
 
-module.exports = { authenticate, authenticateAdmin };
+module.exports = { authenticate, authenticateSuperAdmin };

@@ -57,6 +57,12 @@
   border-radius: 8px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   overflow: hidden;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.table {
+  min-width: 860px;
 }
 
 .tableContainer h3 {
@@ -197,12 +203,30 @@ button:disabled {
 }
 
 @media (max-width: 768px) {
+  .tableContainer h3 {
+    padding: 16px;
+  }
+
   .table {
     font-size: 12px;
   }
 
   .table th,
   .table td {
+    padding: 10px 12px;
+  }
+
+  .filtersBar {
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+
+  .filterGroup label {
+    font-size: 12px;
+  }
+
+  .searchInput,
+  .select {
     padding: 10px 12px;
   }
 

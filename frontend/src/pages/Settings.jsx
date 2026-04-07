@@ -1,16 +1,33 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import AdminLayout from '../components/admin/AdminLayout';
+import { useSettings } from '../context/SettingsContext';
 import styles from './Settings.module.css';
 
+const buildFormSettings = (globalSettings) => ({
+  platformName: globalSettings.platform_name || 'HireHub',
+  companyEmail: globalSettings.company_email || 'support@hirehub.com',
+  companyPhone: globalSettings.company_phone || '+1 (555) 123-4567',
+  address: globalSettings.address || '123 Business Street, Suite 100, New York, NY 10001',
+});
+
 const Settings = () => {
-  const [settings, setSettings] = useState({
-    platformName: 'HireHub',
-    companyEmail: 'admin@hirehub.com',
-    companyPhone: '+1 (555) 123-4567',
-    address: '123 Business Street, Suite 100, New York, NY 10001',
-  });
-  const [edited, setEdited] = useState(false);
+  const { settings: globalSettings, updateSettings } = useSettings();
+  const [settings, setSettings] = useState(() => buildFormSettings(globalSettings));
   const [saving, setSaving] = useState(false);
+  const [saveMessage, setSaveMessage] = useState({ type: '', text: '' });
+
+  const baselineSettings = useMemo(() => buildFormSettings(globalSettings), [globalSettings]);
+  const isDirty = useMemo(() => (
+    settings.platformName !== baselineSettings.platformName
+    || settings.companyEmail !== baselineSettings.companyEmail
+    || settings.companyPhone !== baselineSettings.companyPhone
+    || settings.address !== baselineSettings.address
+  ), [baselineSettings, settings]);
+
+  useEffect(() => {
+    if (saving) return;
+    setSettings(baselineSettings);
+  }, [baselineSettings, saving]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -18,17 +35,31 @@ const Settings = () => {
       ...prev,
       [name]: value
     }));
-    setEdited(true);
   };
 
   const handleSave = async () => {
+    if (!isDirty) {
+      setSaveMessage({ type: 'info', text: 'No changes to save.' });
+      return;
+    }
+
     setSaving(true);
-    // Simulate saving
-    setTimeout(() => {
+    setSaveMessage({ type: '', text: '' });
+
+    try {
+      await updateSettings({
+        platform_name: settings.platformName,
+        company_email: settings.companyEmail,
+        company_phone: settings.companyPhone,
+        address: settings.address,
+      });
       setSaving(false);
-      setEdited(false);
-      alert('Settings saved successfully!');
-    }, 1000);
+      setSaveMessage({ type: 'success', text: 'Settings saved successfully.' });
+    } catch (error) {
+      setSaving(false);
+      const message = error?.response?.data?.message || 'Failed to save settings.';
+      setSaveMessage({ type: 'error', text: message });
+    }
   };
 
   return (
@@ -36,6 +67,20 @@ const Settings = () => {
       <div className={styles.container}>
         <div className={styles.settingsCard}>
           <h3>Platform Settings</h3>
+
+          {saveMessage.text && (
+            <p
+              className={`${styles.saveMessage} ${
+                saveMessage.type === 'error'
+                  ? styles.saveMessageError
+                  : saveMessage.type === 'info'
+                    ? styles.saveMessageInfo
+                    : ''
+              }`}
+            >
+              {saveMessage.text}
+            </p>
+          )}
 
           <div className={styles.formGroup}>
             <label htmlFor="platformName">Platform Name</label>
@@ -85,21 +130,16 @@ const Settings = () => {
             <button
               className={styles.saveBtn}
               onClick={handleSave}
-              disabled={!edited || saving}
+              disabled={saving}
             >
               {saving ? 'Saving...' : '💾 Save Settings'}
             </button>
-            {edited && (
+            {isDirty && (
               <button
                 className={styles.cancelBtn}
                 onClick={() => {
-                  setEdited(false);
-                  setSettings({
-                    platformName: 'HireHub',
-                    companyEmail: 'admin@hirehub.com',
-                    companyPhone: '+1 (555) 123-4567',
-                    address: '123 Business Street, Suite 100, New York, NY 10001',
-                  });
+                  setSaveMessage({ type: '', text: '' });
+                  setSettings(baselineSettings);
                 }}
               >
                 Cancel

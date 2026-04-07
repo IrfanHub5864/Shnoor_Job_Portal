@@ -1,7 +1,7 @@
 const pool = require('../config/database');
 
 class User {
-  static async create(name, email, password, role = 'admin') {
+  static async create(name, email, password, role = 'user') {
     const query = 'INSERT INTO users (name, email, password, role) VALUES ($1, $2, $3, $4) RETURNING *';
     const result = await pool.query(query, [name, email, password, role]);
     return result.rows[0];

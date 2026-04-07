@@ -1,4 +1,5 @@
 const Subscription = require('../models/Subscription');
+const ActivityLog = require('../models/ActivityLog');
 
 // Get All Subscriptions
 const getAllSubscriptions = async (req, res) => {
@@ -38,11 +39,18 @@ const updateSubscriptionStatus = async (req, res) => {
     const { id } = req.params;
     const { status } = req.body;
 
-    if (!['active', 'inactive', 'expired'].includes(status)) {
+    if (!['active', 'inactive'].includes(status)) {
       return res.status(400).json({ message: 'Invalid status' });
     }
 
     const updatedSubscription = await Subscription.updateStatus(id, status);
+
+    await ActivityLog.record(
+      status === 'active' ? 'Activated Subscription' : 'Deactivated Subscription',
+      'subscription',
+      id
+    );
+
     res.status(200).json({
       message: 'Subscription status updated successfully',
       data: updatedSubscription
