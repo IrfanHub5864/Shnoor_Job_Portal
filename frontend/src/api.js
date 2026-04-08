@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const normalizeApiBaseUrl = (value) => {
-  const fallback = 'http://localhost:5001/api';
+  const fallback = 'http://localhost:5000/api';
   if (!value || typeof value !== 'string') {
     return fallback;
   }
@@ -45,6 +45,7 @@ export const companyAPI = {
   getAll: () => api.get('/companies'),
   getById: (id) => api.get(`/companies/${id}`),
   getDetails: (id) => api.get(`/companies/${id}/details`),
+  create: (data) => api.post('/companies', data),
   updateStatus: (id, status) => api.put(`/companies/${id}/status`, { status }),
   approve: (id) => api.put(`/companies/${id}/approve`),
   reject: (id) => api.put(`/companies/${id}/reject`),
@@ -55,7 +56,8 @@ export const userAPI = {
   getAll: () => api.get('/users'),
   getById: (id) => api.get(`/users/${id}`),
   block: (id) => api.put(`/users/${id}/block`),
-  unblock: (id) => api.put(`/users/${id}/unblock`)
+  unblock: (id) => api.put(`/users/${id}/unblock`),
+  delete: (id) => api.delete(`/users/${id}`)
 };
 
 export const jobAPI = {
@@ -67,7 +69,8 @@ export const jobAPI = {
 
 export const applicationAPI = {
   getAll: () => api.get('/applications'),
-  updateStatus: (id, status) => api.put(`/applications/${id}/status`, { status })
+  updateStatus: (id, status) => api.put(`/applications/${id}/status`, { status }),
+  delete: (id) => api.delete(`/applications/${id}`)
 };
 
 export const subscriptionAPI = {
@@ -82,7 +85,12 @@ export const dashboardAPI = {
 };
 
 export const logsAPI = {
-  getAll: () => api.get('/logs')
+  getAll: (filters = {}) => api.get('/logs', { params: filters })
+};
+
+export const settingsAPI = {
+  get: () => api.get('/settings'),
+  update: (payload) => api.put('/settings', payload)
 };
 
 export const contactAPI = {

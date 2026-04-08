@@ -35,6 +35,59 @@
   margin-bottom: 20px;
 }
 
+.createCard {
+  background: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e7edf3;
+  padding: 18px;
+  margin-bottom: 20px;
+}
+
+.createCard h3 {
+  margin: 0 0 14px;
+  font-size: 18px;
+  color: #333;
+}
+
+.createForm {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.createForm input,
+.createForm select,
+.createForm textarea {
+  width: 100%;
+  border: 1px solid #d9e2ec;
+  border-radius: 8px;
+  padding: 12px 14px;
+  background: #fff;
+  font: inherit;
+}
+
+.createForm textarea {
+  grid-column: 1 / -1;
+  resize: vertical;
+}
+
+.createBtn {
+  grid-column: 1 / -1;
+  border: none;
+  border-radius: 8px;
+  padding: 12px 16px;
+  background: #1f5a98;
+  color: #fff;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.createBtn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
 .filterGroup label {
   display: block;
   margin-bottom: 6px;
@@ -57,6 +110,12 @@
   border-radius: 8px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   overflow: hidden;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.table {
+  min-width: 860px;
 }
 
 .tableContainer h3 {
@@ -197,12 +256,34 @@ button:disabled {
 }
 
 @media (max-width: 768px) {
+  .createForm {
+    grid-template-columns: 1fr;
+  }
+
+  .tableContainer h3 {
+    padding: 16px;
+  }
+
   .table {
     font-size: 12px;
   }
 
   .table th,
   .table td {
+    padding: 10px 12px;
+  }
+
+  .filtersBar {
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+
+  .filterGroup label {
+    font-size: 12px;
+  }
+
+  .searchInput,
+  .select {
     padding: 10px 12px;
   }
 

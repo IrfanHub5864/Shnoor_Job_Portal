@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { SettingsProvider } from './context/SettingsContext';
 
 // Pages
 import OpeningPage from './components/pages/OpeningPage';
@@ -8,14 +9,13 @@ import LoginPage from './components/auth/LoginPage';
 import RegisterPage from './components/auth/RegisterPage';
 import OTPVerificationPage from './components/auth/OTPVerificationPage';
 import Dashboard from './pages/Dashboard';
-import Companies from './pages/Companies';
-import Users from './pages/Users';
 import Jobs from './pages/Jobs';
 import Applications from './pages/Applications';
+import Users from './pages/Users';
 import Subscriptions from './pages/Subscriptions';
 import Logs from './pages/Logs';
-import CompanyDetails from './pages/CompanyDetails';
 import Settings from './pages/Settings';
+import Profile from './pages/Profile';
 import ManagerDashboard from './pages/ManagerDashboard';
 import UserHome from './pages/user/UserHome';
 import UserJobProfiles from './pages/user/UserJobProfiles';
@@ -32,7 +32,7 @@ const getDefaultDashboardPath = (role) => {
     return '/admin/dashboard';
   }
 
-  if (role === 'manager') {
+  if (['manager', 'company_manager'].includes(role)) {
     return '/manager/dashboard';
   }
 
@@ -94,6 +94,22 @@ const AppContent = () => {
 
       {/* Admin Routes */}
       <Route
+        path="/admin/profile"
+        element={
+          <ProtectedRoute allowedRoles={['admin', 'superadmin']}>
+            <Profile />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/openings"
+        element={
+          <ProtectedRoute allowedRoles={['admin', 'superadmin']}>
+            <Jobs />
+          </ProtectedRoute>
+        }
+      />
+      <Route
         path="/admin/dashboard"
         element={
           <ProtectedRoute allowedRoles={['admin', 'superadmin']}>
@@ -102,18 +118,10 @@ const AppContent = () => {
         }
       />
       <Route
-        path="/admin/companies"
+        path="/admin/applications"
         element={
           <ProtectedRoute allowedRoles={['admin', 'superadmin']}>
-            <Companies />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/admin/company/:id"
-        element={
-          <ProtectedRoute allowedRoles={['admin', 'superadmin']}>
-            <CompanyDetails />
+            <Applications />
           </ProtectedRoute>
         }
       />
@@ -122,22 +130,6 @@ const AppContent = () => {
         element={
           <ProtectedRoute allowedRoles={['admin', 'superadmin']}>
             <Users />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/admin/jobs"
-        element={
-          <ProtectedRoute allowedRoles={['admin', 'superadmin']}>
-            <Jobs />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/admin/applications"
-        element={
-          <ProtectedRoute allowedRoles={['admin', 'superadmin']}>
-            <Applications />
           </ProtectedRoute>
         }
       />
@@ -170,7 +162,7 @@ const AppContent = () => {
       <Route
         path="/manager/dashboard"
         element={
-          <ProtectedRoute allowedRoles={['manager', 'admin', 'superadmin']}>
+          <ProtectedRoute allowedRoles={['manager', 'company_manager', 'admin', 'superadmin']}>
             <ManagerDashboard />
           </ProtectedRoute>
         }
@@ -272,9 +264,11 @@ const OpeningPageWrapper = () => {
 export default function App() {
   return (
     <Router>
-      <AuthProvider>
-        <AppContent />
-      </AuthProvider>
+      <SettingsProvider>
+        <AuthProvider>
+          <AppContent />
+        </AuthProvider>
+      </SettingsProvider>
     </Router>
   );
 }

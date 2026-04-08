@@ -235,6 +235,17 @@ const createManagerJob = async (req, res) => {
 
     let selectedCompanyId = companyId ? Number(companyId) : null;
 
+    if (selectedCompanyId && Number.isNaN(selectedCompanyId)) {
+      return res.status(400).json({ message: 'Invalid company id' });
+    }
+
+    if (selectedCompanyId) {
+      const selectedCompany = await Company.getById(selectedCompanyId);
+      if (!selectedCompany) {
+        return res.status(404).json({ message: 'Company not found for the provided company id' });
+      }
+    }
+
     if (!selectedCompanyId) {
       const companies = await Company.getAll();
       selectedCompanyId = companies[0]?.id || null;
@@ -269,11 +280,23 @@ const createManagerJob = async (req, res) => {
         predefinedFormKey: applyMode === 'predefined_form' ? predefinedFormKey : null,
         customFormFields: finalCustomFields,
         googleFormUrl: applyMode === 'google_form' ? String(googleFormUrl).trim() : null,
-        managerInstructions: managerInstructions ? String(managerInstructions).trim() : null
+        managerInstructions: managerInstructions ? String(managerInstructions).trim() : null,
+        createdBy: req.user.id
       }
     );
 
-    await ActivityLog.record('Manager Created Job', 'job', job.id);
+    await ActivityLog.record('Manager Created Job', 'job', job.id, {
+      managerId: req.user.id,
+      managerEmail: req.user.email,
+      title: job.title,
+      companyId: job.company_id,
+      companyName: job.company_name || null,
+      location: job.location,
+      applyMode: job.apply_mode,
+      salaryMin: job.salary_min,
+      salaryMax: job.salary_max,
+      managerInstructions: job.manager_instructions || null
+    });
 
     return res.status(201).json({
       message: 'Job created successfully',
@@ -679,10 +702,26 @@ const getTestLinkUpdates = async (req, res) => {
 
 const createInterview = async (req, res) => {
   try {
-    const { candidateEmail, interviewType, scheduledAt } = req.body;
+    const { candidateEmail, interviewType, scheduledAt, jobId } = req.body;
 
     if (!candidateEmail || !interviewType || !scheduledAt) {
       return res.status(400).json({ message: 'candidateEmail, interviewType and scheduledAt are required' });
+    }
+
+    if (jobId !== undefined && jobId !== null && String(jobId).trim() !== '') {
+      const normalizedJobId = Number(jobId);
+      if (Number.isNaN(normalizedJobId)) {
+        return res.status(400).json({ message: 'Invalid job id' });
+      }
+
+      const job = await Job.getById(normalizedJobId);
+      if (!job) {
+        return res.status(404).json({ message: 'Job not found for the provided job id' });
+      }
+
+      req.body.jobId = normalizedJobId;
+    } else {
+      req.body.jobId = null;
     }
 
     const interview = await ManagerWorkflow.createInterview(req.body, req.user.id);
@@ -769,10 +808,26 @@ const getInterviewUpdates = async (req, res) => {
 
 const sendOffboardingLetter = async (req, res) => {
   try {
-    const { candidateEmail } = req.body;
+    const { candidateEmail, jobId } = req.body;
 
     if (!candidateEmail) {
       return res.status(400).json({ message: 'candidateEmail is required' });
+    }
+
+    if (jobId !== undefined && jobId !== null && String(jobId).trim() !== '') {
+      const normalizedJobId = Number(jobId);
+      if (Number.isNaN(normalizedJobId)) {
+        return res.status(400).json({ message: 'Invalid job id' });
+      }
+
+      const job = await Job.getById(normalizedJobId);
+      if (!job) {
+        return res.status(404).json({ message: 'Job not found for the provided job id' });
+      }
+
+      req.body.jobId = normalizedJobId;
+    } else {
+      req.body.jobId = null;
     }
 
     const letter = await ManagerWorkflow.createOffboardingLetter(req.body, req.user.id);

@@ -2,14 +2,15 @@ const pool = require('../config/database');
 
 class User {
   static async create(name, email, password, role = 'user') {
+    const normalizedEmail = String(email || '').trim().toLowerCase();
     const query = 'INSERT INTO users (name, email, password, role) VALUES ($1, $2, $3, $4) RETURNING *';
-    const result = await pool.query(query, [name, email, password, role]);
+    const result = await pool.query(query, [name, normalizedEmail, password, role]);
     return result.rows[0];
   }
 
   static async findByEmail(email) {
-    const query = 'SELECT * FROM users WHERE email = $1';
-    const result = await pool.query(query, [email]);
+    const query = 'SELECT * FROM users WHERE LOWER(email) = LOWER($1)';
+    const result = await pool.query(query, [String(email || '').trim()]);
     return result.rows[0];
   }
 
@@ -28,6 +29,12 @@ class User {
   static async updateBlockStatus(id, isBlocked) {
     const query = 'UPDATE users SET is_blocked = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 RETURNING *';
     const result = await pool.query(query, [isBlocked, id]);
+    return result.rows[0];
+  }
+
+  static async delete(id) {
+    const query = 'DELETE FROM users WHERE id = $1 RETURNING id';
+    const result = await pool.query(query, [id]);
     return result.rows[0];
   }
 }

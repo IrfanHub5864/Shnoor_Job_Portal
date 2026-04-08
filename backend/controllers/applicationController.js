@@ -33,7 +33,24 @@ const updateApplicationStatus = async (req, res) => {
   }
 };
 
+// Delete Application
+const deleteApplication = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const deleted = await Application.delete(id);
+    if (!deleted) {
+      return res.status(404).json({ message: 'Application not found' });
+    }
+    res.status(200).json({
+      message: 'Application deleted successfully'
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Error deleting application', error: error.message });
+  }
+};
+
 module.exports = {
   getAllApplications,
-  updateApplicationStatus
+  updateApplicationStatus,
+  deleteApplication
 };

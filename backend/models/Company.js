@@ -9,21 +9,21 @@ class Company {
   }
 
   static async getAll() {
-    const query = `SELECT c.*, u.email as owner_email, u.name as owner_name FROM companies c 
+    const query = `SELECT c.*, u.email as owner_email, u.name as owner_name, u.role as owner_role FROM companies c 
                    LEFT JOIN users u ON c.owner_id = u.id`;
     const result = await pool.query(query);
     return result.rows;
   }
 
   static async getById(id) {
-    const query = `SELECT c.*, u.email as owner_email, u.name as owner_name FROM companies c 
+    const query = `SELECT c.*, u.email as owner_email, u.name as owner_name, u.role as owner_role FROM companies c 
                    LEFT JOIN users u ON c.owner_id = u.id WHERE c.id = $1`;
     const result = await pool.query(query, [id]);
     return result.rows[0];
   }
 
   static async getDetailById(id) {
-    const companyQuery = `SELECT c.*, u.email as owner_email, u.name as owner_name FROM companies c 
+    const companyQuery = `SELECT c.*, u.email as owner_email, u.name as owner_name, u.role as owner_role FROM companies c 
                           LEFT JOIN users u ON c.owner_id = u.id WHERE c.id = $1`;
     const companyResult = await pool.query(companyQuery, [id]);
 

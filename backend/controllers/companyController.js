@@ -1,5 +1,6 @@
 const Company = require('../models/Company');
 const ActivityLog = require('../models/ActivityLog');
+const User = require('../models/User');
 
 // Get All Companies
 const getAllCompanies = async (req, res) => {
@@ -11,6 +12,32 @@ const getAllCompanies = async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({ message: 'Error fetching companies', error: error.message });
+  }
+};
+
+// Create Company
+const createCompany = async (req, res) => {
+  try {
+    const { name, owner_id, email, phone, website, description } = req.body;
+
+    if (!name || !owner_id || !email) {
+      return res.status(400).json({ message: 'name, owner_id, and email are required' });
+    }
+
+    const owner = await User.findById(owner_id);
+    if (!owner) {
+      return res.status(404).json({ message: 'Owner user not found' });
+    }
+
+    const createdCompany = await Company.create(name, owner_id, email, phone, website, description);
+    await ActivityLog.record('Created Company', 'company', createdCompany.id);
+
+    res.status(201).json({
+      message: 'Company created successfully',
+      data: createdCompany
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Error creating company', error: error.message });
   }
 };
 
@@ -124,6 +151,7 @@ const blockCompany = async (req, res) => {
 
 module.exports = {
   getAllCompanies,
+  createCompany,
   getCompanyById,
   getCompanyDetails,
   updateCompanyStatus,

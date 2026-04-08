@@ -1,7 +1,20 @@
 const pool = require('../config/database');
+const UserProfile = require('./UserProfile');
 
 class Application {
+  static async syncIdSequence() {
+    await pool.query(`
+      SELECT setval(
+        pg_get_serial_sequence('applications', 'id'),
+        COALESCE((SELECT MAX(id) FROM applications), 0) + 1,
+        false
+      );
+    `);
+  }
+
   static async ensureEnhancedSchema() {
+    await UserProfile.ensureTable();
+
     const query = `
       ALTER TABLE applications
       ADD COLUMN IF NOT EXISTS apply_source VARCHAR(50) DEFAULT 'direct_profile',
@@ -16,6 +29,7 @@ class Application {
     `;
 
     await pool.query(query);
+    await this.syncIdSequence();
   }
 
   static async create(jobId, userId, options = {}) {
@@ -81,6 +95,13 @@ class Application {
     await this.ensureEnhancedSchema();
     const query = 'UPDATE applications SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 RETURNING *';
     const result = await pool.query(query, [status, id]);
+    return result.rows[0];
+  }
+
+  static async delete(id) {
+    await this.ensureEnhancedSchema();
+    const query = 'DELETE FROM applications WHERE id = $1 RETURNING id';
+    const result = await pool.query(query, [id]);
     return result.rows[0];
   }
 

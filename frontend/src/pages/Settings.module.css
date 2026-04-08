@@ -18,6 +18,29 @@
   padding-bottom: 10px;
 }
 
+.saveMessage {
+  margin: 0 0 16px 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #e6f4ea;
+  color: #166534;
+  border: 1px solid #b7e4c7;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.saveMessageError {
+  background: #fef2f2;
+  color: #991b1b;
+  border-color: #fecaca;
+}
+
+.saveMessageInfo {
+  background: #eff6ff;
+  color: #1e40af;
+  border-color: #bfdbfe;
+}
+
 .formGroup {
   margin-bottom: 20px;
 }
@@ -152,6 +175,10 @@
     padding: 20px;
   }
 
+  .settingsCard h3 {
+    font-size: 17px;
+  }
+
   .plansGrid {
     grid-template-columns: 1fr;
   }
@@ -163,5 +190,10 @@
   .saveBtn,
   .cancelBtn {
     width: 100%;
+  }
+
+  .formGroup input,
+  .formGroup textarea {
+    padding: 12px;
   }
 }

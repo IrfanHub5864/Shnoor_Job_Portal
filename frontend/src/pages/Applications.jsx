@@ -36,6 +36,20 @@ const Applications = () => {
     }
   };
 
+  const handleDelete = async (appId) => {
+    if (!window.confirm('Are you sure you want to delete this application?')) return;
+    
+    setActionLoading(appId);
+    try {
+      await applicationAPI.delete(appId);
+      setApplications(applications.filter(a => a.id !== appId));
+    } catch (err) {
+      setError('Failed to delete application');
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
   const getStatusBadge = (status) => {
     const badges = {
       applied: styles.badgeApplied,
@@ -107,6 +121,14 @@ const Applications = () => {
                           ✕ Reject
                         </button>
                       )}
+                      <button
+                        className={styles.btnDanger}
+                        onClick={() => handleDelete(app.id)}
+                        disabled={actionLoading === app.id}
+                        style={{ marginLeft: '8px' }}
+                      >
+                        🗑 Delete
+                      </button>
                     </div>
                   </td>
                 </tr>

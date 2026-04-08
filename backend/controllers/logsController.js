@@ -2,7 +2,8 @@ const ActivityLog = require('../models/ActivityLog');
 
 const getAllLogs = async (req, res) => {
   try {
-    const logs = await ActivityLog.getAll();
+    const entityFilter = String(req.query?.entityFilter || 'all').trim().toLowerCase();
+    const logs = await ActivityLog.getAll(entityFilter);
     res.status(200).json({
       message: 'Logs fetched successfully',
       data: logs

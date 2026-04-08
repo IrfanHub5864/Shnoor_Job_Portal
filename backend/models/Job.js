@@ -1,6 +1,16 @@
 const pool = require('../config/database');
 
 class Job {
+  static async syncIdSequence() {
+    await pool.query(`
+      SELECT setval(
+        pg_get_serial_sequence('jobs', 'id'),
+        COALESCE((SELECT MAX(id) FROM jobs), 0) + 1,
+        false
+      );
+    `);
+  }
+
   static async ensureEnhancedSchema() {
     const query = `
       ALTER TABLE jobs
@@ -8,10 +18,13 @@ class Job {
       ADD COLUMN IF NOT EXISTS predefined_form_key VARCHAR(80),
       ADD COLUMN IF NOT EXISTS custom_form_fields JSONB NOT NULL DEFAULT '[]'::jsonb,
       ADD COLUMN IF NOT EXISTS google_form_url TEXT,
-      ADD COLUMN IF NOT EXISTS manager_instructions TEXT;
+      ADD COLUMN IF NOT EXISTS manager_instructions TEXT,
+      ADD COLUMN IF NOT EXISTS created_by INT REFERENCES users(id) ON DELETE SET NULL,
+      ADD COLUMN IF NOT EXISTS updated_by INT REFERENCES users(id) ON DELETE SET NULL;
     `;
 
     await pool.query(query);
+    await this.syncIdSequence();
   }
 
   static async create(companyId, title, description, salaryMin, salaryMax, location, options = {}) {
@@ -29,9 +42,11 @@ class Job {
         predefined_form_key,
         custom_form_fields,
         google_form_url,
-        manager_instructions
+        manager_instructions,
+        created_by,
+        updated_by
       )
-      VALUES ($1, $2, $3, $4, $5, $6, 'open', $7, $8, $9::jsonb, $10, $11)
+      VALUES ($1, $2, $3, $4, $5, $6, 'open', $7, $8, $9::jsonb, $10, $11, $12, $12)
       RETURNING *
     `;
     const result = await pool.query(query, [
@@ -45,23 +60,27 @@ class Job {
       options.predefinedFormKey || null,
       JSON.stringify(Array.isArray(options.customFormFields) ? options.customFormFields : []),
       options.googleFormUrl || null,
-      options.managerInstructions || null
+      options.managerInstructions || null,
+      options.createdBy || null
     ]);
     return result.rows[0];
   }
 
   static async getAll() {
     await this.ensureEnhancedSchema();
-    const query = `SELECT j.*, c.name as company_name FROM jobs j 
-                   LEFT JOIN companies c ON j.company_id = c.id`;
+    const query = `SELECT j.*, c.name as company_name, u.name as created_by_name, u.email as created_by_email FROM jobs j
+                   LEFT JOIN companies c ON j.company_id = c.id
+                   LEFT JOIN users u ON j.created_by = u.id`;
     const result = await pool.query(query);
     return result.rows;
   }
 
   static async getById(id) {
     await this.ensureEnhancedSchema();
-    const query = `SELECT j.*, c.name as company_name FROM jobs j 
-                   LEFT JOIN companies c ON j.company_id = c.id WHERE j.id = $1`;
+    const query = `SELECT j.*, c.name as company_name, u.name as created_by_name, u.email as created_by_email FROM jobs j
+                   LEFT JOIN companies c ON j.company_id = c.id
+                   LEFT JOIN users u ON j.created_by = u.id
+                   WHERE j.id = $1`;
     const result = await pool.query(query, [id]);
     return result.rows[0];
   }

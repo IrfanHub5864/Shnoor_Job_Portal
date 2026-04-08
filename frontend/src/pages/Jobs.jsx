@@ -73,7 +73,7 @@ const Jobs = () => {
 
   if (loading) {
     return (
-      <AdminLayout currentPage="/admin/jobs">
+      <AdminLayout currentPage="/admin/openings">
         <div className={styles.loading}>
           <div className={styles.spinner}></div>
         </div>
@@ -82,7 +82,7 @@ const Jobs = () => {
   }
 
   return (
-    <AdminLayout currentPage="/admin/jobs">
+    <AdminLayout currentPage="/admin/openings">
       {error && <div className={styles.alert}>{error}</div>}
 
       <div className={styles.filtersBar}>
@@ -106,7 +106,7 @@ const Jobs = () => {
             value={statusFilter}
             onChange={(event) => setStatusFilter(event.target.value)}
           >
-            <option value="all">All Statuses</option>
+            <option value="all">All Status</option>
             <option value="open">Open</option>
             <option value="closed">Closed</option>
           </select>
@@ -120,6 +120,7 @@ const Jobs = () => {
             <tr>
               <th>Job Title</th>
               <th>Company Name</th>
+              <th>Created By Manager</th>
               <th>Status</th>
               <th>Created At</th>
               <th>Actions</th>
@@ -128,13 +129,14 @@ const Jobs = () => {
           <tbody>
             {filteredJobs.length === 0 ? (
               <tr>
-                <td colSpan="5" className={styles.empty}>No jobs found</td>
+                <td colSpan="6" className={styles.empty}>No jobs found</td>
               </tr>
             ) : (
               filteredJobs.map(job => (
                 <tr key={job.id}>
                   <td>{job.title}</td>
                   <td>{job.company_name}</td>
+                  <td>{job.created_by_name || job.created_by_email || 'N/A'}</td>
                   <td>
                     <span className={`${styles.badge} ${getStatusBadge(job.status)}`}>
                       {job.status?.toUpperCase()}

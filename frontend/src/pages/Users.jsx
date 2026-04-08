@@ -3,6 +3,24 @@ import { userAPI } from '../api';
 import AdminLayout from '../components/admin/AdminLayout';
 import styles from './Users.module.css';
 
+const ROLE_LABELS = {
+  manager: 'Manager',
+  company_manager: 'Company Manager',
+  user: 'User',
+};
+
+const normalizeRole = (role) => role || 'user';
+
+const getRoleClass = (role) => {
+  const normalizedRole = normalizeRole(role);
+
+  if (normalizedRole === 'superadmin') return styles.roleSuperAdmin;
+  if (normalizedRole === 'company_manager') return styles.roleCompanyManager;
+  return styles.roleUser;
+};
+
+const getRoleLabel = (role) => ROLE_LABELS[normalizeRole(role)] || ROLE_LABELS.user;
+
 const Users = () => {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -14,6 +32,12 @@ const Users = () => {
 
   useEffect(() => {
     fetchUsers();
+
+    const intervalId = setInterval(() => {
+      fetchUsers({ silent: true });
+    }, 10000);
+
+    return () => clearInterval(intervalId);
   }, []);
 
   const formatDate = (dateString) => {
@@ -21,14 +45,23 @@ const Users = () => {
     return new Date(dateString).toLocaleDateString();
   };
 
-  const fetchUsers = async () => {
+  const fetchUsers = async ({ silent = false } = {}) => {
     try {
-      const res = await userAPI.getAll();
-      setUsers(res.data.data);
+      if (!silent) {
+        setLoading(true);
+      }
+
+      const usersRes = await userAPI.getAll();
+      const rows = usersRes.data.data || [];
+      setUsers(rows.filter((user) => ['manager', 'company_manager', 'user'].includes(user.role)));
     } catch (err) {
-      setError('Failed to load users');
+      if (!silent) {
+        setError('Failed to load users');
+      }
     } finally {
-      setLoading(false);
+      if (!silent) {
+        setLoading(false);
+      }
     }
   };
 
@@ -56,9 +89,23 @@ const Users = () => {
     }
   };
 
+  const handleDelete = async (userId) => {
+    if (!window.confirm('Are you sure you want to delete this user?')) return;
+    
+    setActionLoading(userId);
+    try {
+      await userAPI.delete(userId);
+      setUsers(users.filter(u => u.id !== userId));
+    } catch (err) {
+      setError('Failed to delete user');
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
   const filteredUsers = useMemo(() => {
     return users.filter((user) => {
-      const matchesSearch = [user.name, user.email]
+      const matchesSearch = [user.name, user.email, getRoleLabel(user.role)]
         .filter(Boolean)
         .some((value) => value.toLowerCase().includes(searchTerm.toLowerCase()));
       const matchesRole = roleFilter === 'all' || user.role === roleFilter;
@@ -91,7 +138,7 @@ const Users = () => {
             id="user-search"
             type="text"
             className={styles.searchInput}
-            placeholder="Search by name or email"
+            placeholder="Search by name, email, or role"
             value={searchTerm}
             onChange={(event) => setSearchTerm(event.target.value)}
           />
@@ -106,8 +153,9 @@ const Users = () => {
             onChange={(event) => setRoleFilter(event.target.value)}
           >
             <option value="all">All Roles</option>
-            <option value="admin">Admin</option>
-            <option value="superadmin">Super Admin</option>
+            <option value="manager">Manager</option>
+            <option value="company_manager">Company Manager</option>
+            <option value="user">User</option>
           </select>
         </div>
 
@@ -119,7 +167,7 @@ const Users = () => {
             value={statusFilter}
             onChange={(event) => setStatusFilter(event.target.value)}
           >
-            <option value="all">All Statuses</option>
+            <option value="all">All Status</option>
             <option value="active">Active</option>
             <option value="blocked">Blocked</option>
           </select>
@@ -135,48 +183,60 @@ const Users = () => {
               <th>Email</th>
               <th>Role</th>
               <th>Status</th>
-              <th>Created At</th>
               <th>Actions</th>
             </tr>
           </thead>
           <tbody>
             {filteredUsers.length === 0 ? (
               <tr>
-                <td colSpan="6" className={styles.empty}>No users found</td>
+                <td colSpan="5" className={styles.empty}>No users found</td>
               </tr>
             ) : (
-              filteredUsers.map(user => (
-                <tr key={user.id}>
-                  <td>{user.name}</td>
-                  <td>{user.email}</td>
-                  <td><span className={styles.role}>{user.role}</span></td>
-                  <td>
-                    <span className={`${styles.badge} ${getStatusBadge(user.is_blocked)}`}>
-                      {user.is_blocked ? 'BLOCKED' : 'ACTIVE'}
-                    </span>
-                  </td>
-                  <td>{formatDate(user.created_at)}</td>
-                  <td>
-                    {user.is_blocked ? (
-                      <button
-                        className={styles.btnSuccess}
-                        onClick={() => handleUnblock(user.id)}
-                        disabled={actionLoading === user.id}
-                      >
-                        ✓ Unblock
-                      </button>
-                    ) : (
+              filteredUsers.map(user => {
+                return (
+                  <tr key={user.id}>
+                    <td>{user.name}</td>
+                    <td>{user.email}</td>
+                    <td>
+                      <span className={`${styles.role} ${getRoleClass(user.role)}`}>
+                        {getRoleLabel(user.role)}
+                      </span>
+                    </td>
+                    <td>
+                      <span className={`${styles.badge} ${getStatusBadge(user.is_blocked)}`}>
+                        {user.is_blocked ? 'Blocked' : 'Active'}
+                      </span>
+                    </td>
+                    <td>
+                      {user.is_blocked ? (
+                        <button
+                          className={styles.btnSuccess}
+                          onClick={() => handleUnblock(user.id)}
+                          disabled={actionLoading === user.id}
+                        >
+                          ✓ Unblock
+                        </button>
+                      ) : (
+                        <button
+                          className={styles.btnDanger}
+                          onClick={() => handleBlock(user.id)}
+                          disabled={actionLoading === user.id}
+                        >
+                          🚫 Block
+                        </button>
+                      )}
                       <button
                         className={styles.btnDanger}
-                        onClick={() => handleBlock(user.id)}
+                        onClick={() => handleDelete(user.id)}
                         disabled={actionLoading === user.id}
+                        style={{ marginLeft: '8px' }}
                       >
-                        🚫 Block
+                        🗑 Delete
                       </button>
-                    )}
-                  </td>
-                </tr>
-              ))
+                    </td>
+                  </tr>
+                );
+              })
             )}
           </tbody>
         </table>

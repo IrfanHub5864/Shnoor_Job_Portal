@@ -78,7 +78,7 @@ const CompanyDetails = () => {
           <p>{details.company.name}</p>
         </div>
         <div className={styles.summaryCard}>
-          <h4>Owner</h4>
+          <h4>Company Manager</h4>
           <p>{details.company.owner_name || 'N/A'}</p>
         </div>
         <div className={styles.summaryCard}>
@@ -100,7 +100,7 @@ const CompanyDetails = () => {
           <h3>Company Profile</h3>
           <div className={styles.detailList}>
             <div><span>Name:</span> {details.company.name}</div>
-            <div><span>Owner Name:</span> {details.company.owner_name || 'N/A'}</div>
+            <div><span>Company Manager:</span> {details.company.owner_name || 'N/A'}</div>
             <div><span>Email:</span> {details.company.email || 'N/A'}</div>
             <div><span>Status:</span> <span className={`${styles.badge} ${getStatusBadge(details.company.status)}`}>{details.company.status?.toUpperCase()}</span></div>
             <div><span>Created At:</span> {formatDate(details.company.created_at)}</div>

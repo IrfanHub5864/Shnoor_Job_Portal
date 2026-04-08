@@ -4,7 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import styles from './OTPVerificationPage.module.css';
 
 const getRoleRoute = (role) => {
-  if (role === 'manager') {
+  if (['manager', 'company_manager'].includes(role)) {
     return '/manager/dashboard';
   }
 

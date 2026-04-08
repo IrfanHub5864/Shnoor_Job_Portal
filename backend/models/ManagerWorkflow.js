@@ -1,6 +1,34 @@
 const pool = require('../config/database');
 
 class ManagerWorkflow {
+  static async syncSequences() {
+    await pool.query(`
+      SELECT setval(
+        pg_get_serial_sequence('manager_profiles', 'id'),
+        COALESCE((SELECT MAX(id) FROM manager_profiles), 0) + 1,
+        false
+      );
+
+      SELECT setval(
+        pg_get_serial_sequence('manager_interviews', 'id'),
+        COALESCE((SELECT MAX(id) FROM manager_interviews), 0) + 1,
+        false
+      );
+
+      SELECT setval(
+        pg_get_serial_sequence('manager_interview_updates', 'id'),
+        COALESCE((SELECT MAX(id) FROM manager_interview_updates), 0) + 1,
+        false
+      );
+
+      SELECT setval(
+        pg_get_serial_sequence('manager_offboarding_letters', 'id'),
+        COALESCE((SELECT MAX(id) FROM manager_offboarding_letters), 0) + 1,
+        false
+      );
+    `);
+  }
+
   static async ensureTables() {
     const query = `
       CREATE TABLE IF NOT EXISTS manager_profiles (
@@ -58,6 +86,7 @@ class ManagerWorkflow {
     `;
 
     await pool.query(query);
+    await this.syncSequences();
   }
 
   static async getManagerProfile(user) {

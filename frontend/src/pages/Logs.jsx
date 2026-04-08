@@ -7,19 +7,35 @@ const Logs = () => {
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [entityFilter, setEntityFilter] = useState('all');
+  const [selectedLog, setSelectedLog] = useState(null);
 
   useEffect(() => {
     fetchLogs();
-  }, []);
 
-  const fetchLogs = async () => {
+    const intervalId = setInterval(() => {
+      fetchLogs({ silent: true });
+    }, 10000);
+
+    return () => clearInterval(intervalId);
+  }, [entityFilter]);
+
+  const fetchLogs = async ({ silent = false } = {}) => {
     try {
-      const response = await logsAPI.getAll();
+      if (!silent) {
+        setLoading(true);
+      }
+
+      const response = await logsAPI.getAll({ entityFilter });
       setLogs(response.data.data);
     } catch (err) {
-      setError('Failed to load activity logs');
+      if (!silent) {
+        setError('Failed to load activity logs');
+      }
     } finally {
-      setLoading(false);
+      if (!silent) {
+        setLoading(false);
+      }
     }
   };
 
@@ -52,7 +68,18 @@ const Logs = () => {
       {error && <div className={styles.alert}>{error}</div>}
 
       <div className={styles.tableContainer}>
-        <h3>Activity Logs</h3>
+        <div className={styles.tableHeader}>
+          <h3>Activity Logs</h3>
+          <div className={styles.filterWrap}>
+            <select id="entityFilter" value={entityFilter} onChange={(event) => setEntityFilter(event.target.value)}>
+              <option value="all">All</option>
+              <option value="user">Users</option>
+              <option value="application">Applications</option>
+              <option value="job">Jobs</option>
+              <option value="interview">Interviews</option>
+            </select>
+          </div>
+        </div>
         <table className={styles.table}>
           <thead>
             <tr>
@@ -70,7 +97,15 @@ const Logs = () => {
             ) : (
               logs.map((log) => (
                 <tr key={log.id}>
-                  <td><span className={`${styles.badge} ${getActionBadge(log.action)}`}>{log.action}</span></td>
+                  <td>
+                    <button
+                      type="button"
+                      className={styles.actionLink}
+                      onClick={() => setSelectedLog(log)}
+                    >
+                      <span className={`${styles.badge} ${getActionBadge(log.action)}`}>{log.action}</span>
+                    </button>
+                  </td>
                   <td>{log.entity_type}</td>
                   <td>{log.entity_id}</td>
                   <td>{formatDate(log.created_at)}</td>
@@ -80,6 +115,19 @@ const Logs = () => {
           </tbody>
         </table>
       </div>
+
+      {selectedLog && (
+        <div className={styles.modalBackdrop} onClick={() => setSelectedLog(null)}>
+          <div className={styles.modal} onClick={(event) => event.stopPropagation()}>
+            <h3>Action Details</h3>
+            <p><strong>Action:</strong> {selectedLog.action}</p>
+            <p><strong>Entity:</strong> {selectedLog.entity_type} #{selectedLog.entity_id}</p>
+            <p><strong>Time:</strong> {formatDate(selectedLog.created_at)}</p>
+            <pre className={styles.metaBox}>{JSON.stringify(selectedLog.metadata || {}, null, 2)}</pre>
+            <button type="button" className={styles.closeBtn} onClick={() => setSelectedLog(null)}>Close</button>
+          </div>
+        </div>
+      )}
     </AdminLayout>
   );
 };

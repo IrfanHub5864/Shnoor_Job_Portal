@@ -4,6 +4,7 @@ const Application = require('../models/Application');
 const UserProfile = require('../models/UserProfile');
 const ManagerTestLink = require('../models/ManagerTestLink');
 const ManagerWorkflow = require('../models/ManagerWorkflow');
+const ActivityLog = require('../models/ActivityLog');
 const {
   QUIZ_QUESTIONS,
   getJobFormFields,
@@ -46,6 +47,7 @@ const upsertMyProfile = async (req, res) => {
     }
 
     const profile = await UserProfile.upsertByUserId(user, req.body || {});
+    await ActivityLog.record('User Updated Profile', 'user', req.user.id);
     res.status(200).json({
       message: 'Profile updated successfully',
       data: profile
@@ -204,6 +206,15 @@ const applyToJob = async (req, res) => {
       applySource: applyMode,
       submittedDetails: applicationPayload,
       testTotalQuestions: QUIZ_QUESTIONS.length
+    });
+
+    await ActivityLog.record('User Applied To Job', 'application', application.id, {
+      userId: req.user.id,
+      userEmail: user.email,
+      jobId,
+      jobTitle: job.title,
+      companyName: job.company_name || null,
+      applyMode
     });
 
     res.status(201).json({
@@ -523,6 +534,7 @@ const submitAssessmentQuiz = async (req, res) => {
     );
 
     await ManagerTestLink.createUpdateLog(link.id, link, updatedLink, req.user.id);
+    await ActivityLog.record('User Submitted Assessment', 'application', applicationId);
 
     res.status(200).json({
       message: passed ? 'Test passed successfully' : 'Test submitted successfully',

@@ -1,6 +1,22 @@
 const pool = require('../config/database');
 
 class ManagerTestLink {
+  static async syncSequences() {
+    await pool.query(`
+      SELECT setval(
+        pg_get_serial_sequence('manager_test_links', 'id'),
+        COALESCE((SELECT MAX(id) FROM manager_test_links), 0) + 1,
+        false
+      );
+
+      SELECT setval(
+        pg_get_serial_sequence('manager_test_link_updates', 'id'),
+        COALESCE((SELECT MAX(id) FROM manager_test_link_updates), 0) + 1,
+        false
+      );
+    `);
+  }
+
   static async ensureTables() {
     const query = `
       CREATE TABLE IF NOT EXISTS manager_test_links (
@@ -52,6 +68,7 @@ class ManagerTestLink {
     `;
 
     await pool.query(query);
+    await this.syncSequences();
   }
 
   static async getAll() {

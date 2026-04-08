@@ -90,33 +90,50 @@ const ManagerDashboard = () => {
     setLoading(true);
     setError('');
     try {
-      const [profileRes, statsRes, usersRes, jobsRes, appRes, linksRes, ivRes, offRes, updatesRes] = await Promise.all([
-        managerAPI.getProfile(),
-        managerAPI.getStats(),
-        managerAPI.getUsers(),
-        managerAPI.getJobs(),
-        managerAPI.getApplications(),
-        managerAPI.getTestLinks(),
-        managerAPI.getInterviews(),
-        managerAPI.getOffboardingLetters(),
-        managerAPI.getRecentUpdates()
-      ]);
-      const profile = profileRes.data.data || {};
-      setProfileForm({
-        name: profile.name || '',
-        phone: profile.phone || '',
-        department: profile.department || '',
-        bio: profile.bio || '',
-        photo_url: profile.photo_url || ''
-      });
-      setStats(statsRes.data.data || null);
-      setUsers(usersRes.data.data || []);
-      setJobs(jobsRes.data.data || []);
-      setApplications(appRes.data.data || []);
-      setTestLinks(linksRes.data.data || []);
-      setInterviews(ivRes.data.data || []);
-      setOffboardingLetters(offRes.data.data || []);
-      setRecentUpdates(updatesRes.data.data || []);
+      const requests = [
+        { key: 'profile', call: managerAPI.getProfile },
+        { key: 'stats', call: managerAPI.getStats },
+        { key: 'users', call: managerAPI.getUsers },
+        { key: 'jobs', call: managerAPI.getJobs },
+        { key: 'applications', call: managerAPI.getApplications },
+        { key: 'testLinks', call: managerAPI.getTestLinks },
+        { key: 'interviews', call: managerAPI.getInterviews },
+        { key: 'offboardingLetters', call: managerAPI.getOffboardingLetters },
+        { key: 'recentUpdates', call: managerAPI.getRecentUpdates }
+      ];
+
+      const settled = await Promise.allSettled(requests.map((entry) => entry.call()));
+      const responseMap = requests.reduce((acc, entry, index) => {
+        acc[entry.key] = settled[index];
+        return acc;
+      }, {});
+
+      const profileState = responseMap.profile;
+      if (profileState?.status === 'fulfilled') {
+        const profile = profileState.value?.data?.data || {};
+        setProfileForm({
+          name: profile.name || '',
+          phone: profile.phone || '',
+          department: profile.department || '',
+          bio: profile.bio || '',
+          photo_url: profile.photo_url || ''
+        });
+      }
+
+      setStats(responseMap.stats?.status === 'fulfilled' ? (responseMap.stats.value?.data?.data || null) : null);
+      setUsers(responseMap.users?.status === 'fulfilled' ? (responseMap.users.value?.data?.data || []) : []);
+      setJobs(responseMap.jobs?.status === 'fulfilled' ? (responseMap.jobs.value?.data?.data || []) : []);
+      setApplications(responseMap.applications?.status === 'fulfilled' ? (responseMap.applications.value?.data?.data || []) : []);
+      setTestLinks(responseMap.testLinks?.status === 'fulfilled' ? (responseMap.testLinks.value?.data?.data || []) : []);
+      setInterviews(responseMap.interviews?.status === 'fulfilled' ? (responseMap.interviews.value?.data?.data || []) : []);
+      setOffboardingLetters(responseMap.offboardingLetters?.status === 'fulfilled' ? (responseMap.offboardingLetters.value?.data?.data || []) : []);
+      setRecentUpdates(responseMap.recentUpdates?.status === 'fulfilled' ? (responseMap.recentUpdates.value?.data?.data || []) : []);
+
+      const failed = settled.filter((item) => item.status === 'rejected');
+      if (failed.length) {
+        const firstError = failed[0].reason?.response?.data?.message || failed[0].reason?.message || 'Some manager data could not be loaded';
+        setError(`${firstError}. Loaded available manager sections.`);
+      }
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to load manager dashboard');
     } finally {
@@ -457,15 +474,20 @@ const ManagerDashboard = () => {
             <h3>Send Offboarding Letter</h3>
             <form onSubmit={(e) => { e.preventDefault(); withSave(() => managerAPI.sendOffboardingLetter({ candidateEmail: newOffboardingForm.candidateEmail, jobId: newOffboardingForm.jobId ? Number(newOffboardingForm.jobId) : null, notes: newOffboardingForm.notes }), 'Failed to send offboarding letter'); }} className={styles.form}>
               <input type="email" placeholder="Candidate Email" value={newOffboardingForm.candidateEmail} onChange={(e) => setNewOffboardingForm((p) => ({ ...p, candidateEmail: e.target.value }))} required />
-              <input type="number" placeholder="Job ID (optional)" value={newOffboardingForm.jobId} onChange={(e) => setNewOffboardingForm((p) => ({ ...p, jobId: e.target.value }))} />
+              <select value={newOffboardingForm.jobId} onChange={(e) => setNewOffboardingForm((p) => ({ ...p, jobId: e.target.value }))} className={styles.select}>
+                <option value="">-- Select Job (Optional) --</option>
+                {jobs.map((job) => (
+                  <option key={job.id} value={job.id}>{job.id} - {job.title}</option>
+                ))}
+              </select>
               <textarea placeholder="Letter notes" value={newOffboardingForm.notes} onChange={(e) => setNewOffboardingForm((p) => ({ ...p, notes: e.target.value }))} />
               <button type="submit" className={styles.btnPrimary} disabled={saving}>Send Letter</button>
             </form>
           </div>
           <div className={styles.card}>
             <h3>Offboarding Letters</h3>
-            <table className={styles.table}><thead><tr><th>Candidate</th><th>Job</th><th>Status</th><th>Sent At</th></tr></thead>
-              <tbody>{offboardingLetters.map((o) => <tr key={o.id}><td>{o.candidate_email}</td><td>{o.job_title || 'N/A'}</td><td>{o.status}</td><td>{formatDateTime(o.sent_at)}</td></tr>)}</tbody>
+            <table className={styles.table}><thead><tr><th>Candidate</th><th>Job ID</th><th>Job Title</th><th>Status</th><th>Sent At</th></tr></thead>
+              <tbody>{offboardingLetters.map((o) => <tr key={o.id}><td>{o.candidate_email}</td><td>{o.job_id || 'N/A'}</td><td>{o.job_title || 'N/A'}</td><td>{o.status}</td><td>{formatDateTime(o.sent_at)}</td></tr>)}</tbody>
             </table>
           </div>
         </div>

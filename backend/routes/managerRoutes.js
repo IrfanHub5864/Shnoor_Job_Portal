@@ -29,7 +29,7 @@ const { authenticateRoles } = require('../middleware/authMiddleware');
 
 const router = express.Router();
 
-router.use(authenticateRoles('manager', 'admin', 'superadmin'));
+router.use(authenticateRoles('manager', 'company_manager', 'admin', 'superadmin'));
 
 router.get('/profile', getProfile);
 router.put('/profile', updateProfile);
