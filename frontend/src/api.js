@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const normalizeApiBaseUrl = (value) => {
-  const fallback = 'http://localhost:5000/api';
+  const fallback = 'http://localhost:5001/api';
   if (!value || typeof value !== 'string') {
     return fallback;
   }

@@ -47,6 +47,8 @@ const emptyJobForm = () => ({
 });
 
 const formatDateTime = (value) => (value ? new Date(value).toLocaleString() : 'N/A');
+const DEFAULT_MANAGER_PHOTO = 'https://cdn-icons-png.flaticon.com/512/149/149071.png';
+const INITIAL_PHOTO_ADJUSTMENT = { zoom: 1, offsetX: 0, offsetY: 0 };
 
 const ManagerDashboard = () => {
   const { user } = useAuth();
@@ -65,8 +67,15 @@ const ManagerDashboard = () => {
   const [atsJobId, setAtsJobId] = useState('');
   const [atsShortlistCount, setAtsShortlistCount] = useState(2);
   const [atsScores, setAtsScores] = useState({});
+  const [selectedApplicationsJobId, setSelectedApplicationsJobId] = useState('');
+  const [selectedApplicantId, setSelectedApplicantId] = useState(null);
 
   const [profileForm, setProfileForm] = useState({ name: '', phone: '', department: '', bio: '', photo_url: '' });
+  const [initialProfileForm, setInitialProfileForm] = useState({ name: '', phone: '', department: '', bio: '', photo_url: '' });
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [selectedPhotoName, setSelectedPhotoName] = useState('');
+  const [photoAdjustSource, setPhotoAdjustSource] = useState('');
+  const [photoAdjustment, setPhotoAdjustment] = useState(INITIAL_PHOTO_ADJUSTMENT);
   const [newJobForm, setNewJobForm] = useState(emptyJobForm);
   const [newInterviewForm, setNewInterviewForm] = useState({
     jobId: '', candidateEmail: '', interviewType: 'Technical', interviewerName: '', scheduledAt: '', mode: 'Google Meet', meetingLink: '', notes: ''
@@ -85,6 +94,39 @@ const ManagerDashboard = () => {
       return true;
     });
   }, [applications]);
+
+  const groupedApplications = useMemo(() => {
+    const bucket = new Map();
+    applications.forEach((application) => {
+      const jobId = Number(application.job_id) || 0;
+      if (!bucket.has(jobId)) {
+        bucket.set(jobId, {
+          jobId,
+          jobTitle: application.job_title || 'Untitled Role',
+          applicants: []
+        });
+      }
+      bucket.get(jobId).applicants.push(application);
+    });
+
+    return [...bucket.values()]
+      .map((group) => ({
+        ...group,
+        applicantCount: group.applicants.length,
+        applicants: group.applicants.sort((left, right) => new Date(right.applied_at) - new Date(left.applied_at))
+      }))
+      .sort((left, right) => left.jobTitle.localeCompare(right.jobTitle));
+  }, [applications]);
+
+  const selectedApplicationsJob = useMemo(
+    () => groupedApplications.find((group) => Number(group.jobId) === Number(selectedApplicationsJobId)) || null,
+    [groupedApplications, selectedApplicationsJobId]
+  );
+
+  const selectedApplicant = useMemo(() => {
+    if (!selectedApplicationsJob) return null;
+    return selectedApplicationsJob.applicants.find((application) => Number(application.id) === Number(selectedApplicantId)) || null;
+  }, [selectedApplicationsJob, selectedApplicantId]);
 
   const loadData = async () => {
     setLoading(true);
@@ -118,6 +160,16 @@ const ManagerDashboard = () => {
           bio: profile.bio || '',
           photo_url: profile.photo_url || ''
         });
+        setInitialProfileForm({
+          name: profile.name || '',
+          phone: profile.phone || '',
+          department: profile.department || '',
+          bio: profile.bio || '',
+          photo_url: profile.photo_url || ''
+        });
+        setPhotoAdjustSource(profile.photo_url || '');
+        setPhotoAdjustment(INITIAL_PHOTO_ADJUSTMENT);
+        setSelectedPhotoName('');
       }
 
       setStats(responseMap.stats?.status === 'fulfilled' ? (responseMap.stats.value?.data?.data || null) : null);
@@ -144,6 +196,31 @@ const ManagerDashboard = () => {
   useEffect(() => {
     loadData();
   }, []);
+
+  useEffect(() => {
+    if (!groupedApplications.length) {
+      setSelectedApplicationsJobId('');
+      setSelectedApplicantId(null);
+      return;
+    }
+
+    const currentGroupExists = groupedApplications.some((group) => Number(group.jobId) === Number(selectedApplicationsJobId));
+    const nextJobId = currentGroupExists ? selectedApplicationsJobId : String(groupedApplications[0].jobId);
+    if (!currentGroupExists) {
+      setSelectedApplicationsJobId(nextJobId);
+    }
+
+    const activeGroup = groupedApplications.find((group) => Number(group.jobId) === Number(nextJobId)) || groupedApplications[0];
+    if (!activeGroup?.applicants?.length) {
+      setSelectedApplicantId(null);
+      return;
+    }
+
+    const applicantExists = activeGroup.applicants.some((application) => Number(application.id) === Number(selectedApplicantId));
+    if (!applicantExists) {
+      setSelectedApplicantId(activeGroup.applicants[0].id);
+    }
+  }, [groupedApplications, selectedApplicationsJobId, selectedApplicantId]);
 
   const withSave = async (fn, fallback) => {
     setSaving(true);
@@ -178,12 +255,28 @@ const ManagerDashboard = () => {
 
   const sendTestLink = async (application) => {
     const linkUrl = window.prompt(`Enter test link URL for ${application.user_email}:`);
-    if (!linkUrl) return;
-    const notes = window.prompt('Optional notes for candidate:') || '';
-    const passPercentage = Number(window.prompt('Pass percentage (default 75):', '75')) || 75;
-    const quizQuestionCount = Number(window.prompt('Question count (default 10):', '10')) || 10;
+    if (linkUrl === null) return;
+    if (!String(linkUrl).trim()) return;
+
+    const notesPrompt = window.prompt('Optional notes for candidate:');
+    if (notesPrompt === null) return;
+
+    const passPrompt = window.prompt('Pass percentage (default 75):', '75');
+    if (passPrompt === null) return;
+
+    const questionPrompt = window.prompt('Question count (default 10):', '10');
+    if (questionPrompt === null) return;
+
+    const notes = notesPrompt || '';
+    const passPercentage = Number(passPrompt) || 75;
+    const quizQuestionCount = Number(questionPrompt) || 10;
+
     await withSave(() => managerAPI.shortlistAndSendTestLink(application.id, {
-      linkUrl, notes, linkStatus: 'sent', passPercentage, quizQuestionCount
+      linkUrl: String(linkUrl).trim(),
+      notes,
+      linkStatus: 'sent',
+      passPercentage,
+      quizQuestionCount
     }), 'Failed to send test link');
   };
 
@@ -274,9 +367,122 @@ const ManagerDashboard = () => {
     );
   };
 
+  const handleManagerPhotoUpload = (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setSelectedPhotoName(file.name || '');
+    const reader = new FileReader();
+    reader.onload = () => {
+      const imageData = String(reader.result || '');
+      setProfileForm((prev) => ({ ...prev, photo_url: imageData }));
+      setPhotoAdjustSource(imageData);
+      setPhotoAdjustment(INITIAL_PHOTO_ADJUSTMENT);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const applyPhotoAdjustment = () => {
+    if (!photoAdjustSource) return;
+
+    const image = new Image();
+    image.crossOrigin = 'anonymous';
+    image.onload = () => {
+      const outputSize = 400;
+      const canvas = document.createElement('canvas');
+      canvas.width = outputSize;
+      canvas.height = outputSize;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        setError('Unable to adjust image. Please try another photo.');
+        return;
+      }
+
+      const scale = Math.max(outputSize / image.width, outputSize / image.height) * photoAdjustment.zoom;
+      const drawWidth = image.width * scale;
+      const drawHeight = image.height * scale;
+      const maxShiftX = Math.max(0, (drawWidth - outputSize) / 2);
+      const maxShiftY = Math.max(0, (drawHeight - outputSize) / 2);
+      const shiftX = (photoAdjustment.offsetX / 100) * maxShiftX;
+      const shiftY = (photoAdjustment.offsetY / 100) * maxShiftY;
+      const drawX = (outputSize - drawWidth) / 2 + shiftX;
+      const drawY = (outputSize - drawHeight) / 2 + shiftY;
+
+      ctx.clearRect(0, 0, outputSize, outputSize);
+      ctx.drawImage(image, drawX, drawY, drawWidth, drawHeight);
+
+      const adjustedPhoto = canvas.toDataURL('image/jpeg', 0.92);
+      setProfileForm((prev) => ({ ...prev, photo_url: adjustedPhoto }));
+      setPhotoAdjustSource(adjustedPhoto);
+      setError('');
+    };
+
+    image.onerror = () => {
+      setError('Unable to adjust image. Please try another upload.');
+    };
+
+    image.src = photoAdjustSource;
+  };
+
+  const saveManagerProfile = async () => {
+    await withSave(async () => {
+      await managerAPI.updateProfile(profileForm);
+      setIsEditingProfile(false);
+    }, 'Failed to update profile');
+  };
+
+  const cancelManagerProfileEdit = () => {
+    setProfileForm(initialProfileForm);
+    setPhotoAdjustSource(initialProfileForm.photo_url || '');
+    setPhotoAdjustment(INITIAL_PHOTO_ADJUSTMENT);
+    setSelectedPhotoName('');
+    setIsEditingProfile(false);
+  };
+
+  const handlePhotoUrlInput = (event) => {
+    const value = event.target.value;
+    setProfileForm((prev) => ({ ...prev, photo_url: value }));
+    setPhotoAdjustSource(value);
+    setSelectedPhotoName('');
+  };
+
   const getApplicationCandidateName = (application) => {
     const values = application?.submitted_details?.values || {};
     return values.fullName || values.displayName || application.user_display_name || application.user_name || 'N/A';
+  };
+
+  const formatFieldLabel = (key) => String(key || '')
+    .replace(/_/g, ' ')
+    .replace(/([A-Z])/g, ' $1')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+
+  const getApplicantDetailsRows = (application) => {
+    if (!application) return [];
+    const submittedValues = application?.submitted_details?.values || {};
+    const profileSnapshot = application?.submitted_details?.profileSnapshot || {};
+
+    const rows = [
+      { label: 'Name', value: getApplicationCandidateName(application) },
+      { label: 'Email', value: application.user_email || 'N/A' },
+      { label: 'Status', value: application.status || 'N/A' },
+      { label: 'Applied On', value: formatDateTime(application.applied_at) },
+      { label: 'Headline', value: profileSnapshot.headline || 'N/A' },
+      { label: 'Phone', value: profileSnapshot.phone || submittedValues.phone || 'N/A' },
+      { label: 'Skills', value: Array.isArray(profileSnapshot.skills) ? profileSnapshot.skills.join(', ') || 'N/A' : 'N/A' }
+    ];
+
+    Object.entries(submittedValues).forEach(([key, value]) => {
+      if (['fullName', 'displayName', 'phone'].includes(key)) return;
+      if (value === null || value === undefined || value === '') return;
+      rows.push({
+        label: formatFieldLabel(key),
+        value: Array.isArray(value) ? value.join(', ') : String(value)
+      });
+    });
+
+    return rows;
   };
 
   const tableLoading = loading ? <div className={styles.loading}><div className={styles.spinner}></div></div> : null;
@@ -289,8 +495,9 @@ const ManagerDashboard = () => {
         <div className={styles.grid}>
           <div className={styles.card}><h3>Applications</h3><p className={styles.bigNumber}>{stats?.totalApplications || 0}</p></div>
           <div className={styles.card}><h3>Openings</h3><p className={styles.bigNumber}>{stats?.totalOpenings || 0}</p></div>
-          <div className={styles.card}><h3>Cleared Tests</h3><p className={styles.bigNumber}>{stats?.clearedTests || 0}</p></div>
+          <div className={styles.card}><h3>Cleared Test</h3><p className={styles.bigNumber}>{stats?.clearedTests || 0}</p></div>
           <div className={styles.card}><h3>Cleared Interviews</h3><p className={styles.bigNumber}>{stats?.clearedInterviews || 0}</p></div>
+          <div className={styles.card}><h3>Cleared Both</h3><p className={styles.bigNumber}>{stats?.clearedBoth || 0}</p></div>
         </div>
       );
     }
@@ -299,12 +506,94 @@ const ManagerDashboard = () => {
       return (
         <div className={styles.card}>
           <h3>Manager Profile</h3>
-          <div className={styles.form}>
-            <input value={profileForm.name} onChange={(e) => setProfileForm((p) => ({ ...p, name: e.target.value }))} placeholder="Name" />
-            <input value={profileForm.phone} onChange={(e) => setProfileForm((p) => ({ ...p, phone: e.target.value }))} placeholder="Phone" />
-            <input value={profileForm.department} onChange={(e) => setProfileForm((p) => ({ ...p, department: e.target.value }))} placeholder="Department" />
-            <textarea value={profileForm.bio} onChange={(e) => setProfileForm((p) => ({ ...p, bio: e.target.value }))} placeholder="Bio" />
-            <button type="button" className={styles.btnPrimary} disabled={saving} onClick={() => withSave(() => managerAPI.updateProfile(profileForm), 'Failed to update profile')}>Save Profile</button>
+          <div className={styles.profileEditor}>
+            <div className={styles.profilePhotoBlock}>
+              <img
+                src={profileForm.photo_url || DEFAULT_MANAGER_PHOTO}
+                alt="Manager profile"
+                className={styles.profilePhoto}
+              />
+              {isEditingProfile ? (
+                <>
+                  <label htmlFor="manager-profile-photo" className={`${styles.btnPrimary} ${styles.profileSideAction}`}>Select Profile</label>
+                  <input
+                    id="manager-profile-photo"
+                    type="file"
+                    accept="image/*"
+                    className={styles.hiddenFileInput}
+                    onChange={handleManagerPhotoUpload}
+                  />
+                  {selectedPhotoName && <p className={styles.mutedText}>Selected: {selectedPhotoName}</p>}
+                  <input
+                    value={profileForm.photo_url}
+                    onChange={handlePhotoUrlInput}
+                    placeholder="Or paste image URL"
+                  />
+                  <button
+                    type="button"
+                    className={`${styles.btnWarning} ${styles.profileSideAction}`}
+                    onClick={() => {
+                      setProfileForm((p) => ({ ...p, photo_url: '' }));
+                      setPhotoAdjustSource('');
+                      setPhotoAdjustment(INITIAL_PHOTO_ADJUSTMENT);
+                      setSelectedPhotoName('');
+                    }}
+                    disabled={saving}
+                  >
+                    Remove Photo
+                  </button>
+                </>
+              ) : (
+                <p className={styles.mutedText}>Photo preview</p>
+              )}
+            </div>
+            <div className={styles.form}>
+              <input
+                value={profileForm.name}
+                onChange={(e) => setProfileForm((p) => ({ ...p, name: e.target.value }))}
+                placeholder="Name"
+                disabled={!isEditingProfile}
+              />
+              <input
+                value={profileForm.phone}
+                onChange={(e) => setProfileForm((p) => ({ ...p, phone: e.target.value }))}
+                placeholder="Phone"
+                disabled={!isEditingProfile}
+              />
+              <input
+                value={profileForm.department}
+                onChange={(e) => setProfileForm((p) => ({ ...p, department: e.target.value }))}
+                placeholder="Department"
+                disabled={!isEditingProfile}
+              />
+              <textarea
+                value={profileForm.bio}
+                onChange={(e) => setProfileForm((p) => ({ ...p, bio: e.target.value }))}
+                placeholder="Bio"
+                disabled={!isEditingProfile}
+              />
+              <div className={styles.actionsRow}>
+                {!isEditingProfile ? (
+                  <button
+                    type="button"
+                    className={styles.btnPrimary}
+                    disabled={saving}
+                    onClick={() => setIsEditingProfile(true)}
+                  >
+                    Edit Profile
+                  </button>
+                ) : (
+                  <>
+                    <button type="button" className={styles.btnPrimary} disabled={saving} onClick={saveManagerProfile}>
+                      {saving ? 'Saving...' : 'Save Profile'}
+                    </button>
+                    <button type="button" className={styles.btnDanger} disabled={saving} onClick={cancelManagerProfileEdit}>
+                      Cancel
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
           </div>
         </div>
       );
@@ -373,6 +662,8 @@ const ManagerDashboard = () => {
     }
 
     if (activeSection === 'applications') {
+      const selectedRoleApplicants = selectedApplicationsJob?.applicants || [];
+      const applicantDetailsRows = getApplicantDetailsRows(selectedApplicant);
       return (
         <div className={styles.card}>
           <h3>Applications</h3>
@@ -394,29 +685,92 @@ const ManagerDashboard = () => {
               ATS Shortlist Top {atsShortlistCount}
             </button>
           </div>
-          <table className={styles.table}><thead><tr><th>Job</th><th>Candidate</th><th>Email</th><th>ATS Score</th><th>Status</th><th>Action</th></tr></thead>
-            <tbody>{applications.length === 0 ? <tr><td colSpan="6" className={styles.empty}>No applications found</td></tr> : applications.map((a) => (
-              <tr key={a.id}>
-                <td>{a.job_title}</td>
-                <td>{getApplicationCandidateName(a)}{renderApplicationDetails(a)}</td>
-                <td>{a.user_email}</td>
-                <td>
-                  {atsScores[a.id] ? (
-                    <div>
-                      <strong>{atsScores[a.id].score}%</strong>
-                      <p className={styles.mutedText}>{atsScores[a.id].reason}</p>
+          {groupedApplications.length === 0 ? (
+            <div className={styles.empty}>No applications found</div>
+          ) : (
+            <div className={styles.applicationBoard}>
+              <div className={styles.roleColumn}>
+                <h4>Job Profiles</h4>
+                <div className={styles.roleList}>
+                  {groupedApplications.map((group) => (
+                    <button
+                      key={group.jobId}
+                      type="button"
+                      className={`${styles.roleItem} ${Number(selectedApplicationsJobId) === Number(group.jobId) ? styles.roleItemActive : ''}`}
+                      onClick={() => {
+                        setSelectedApplicationsJobId(String(group.jobId));
+                        setSelectedApplicantId(group.applicants[0]?.id || null);
+                      }}
+                    >
+                      <span>{group.jobTitle}</span>
+                      <span className={styles.roleCount}>{group.applicantCount}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className={styles.applicantColumn}>
+                <h4>{selectedApplicationsJob?.jobTitle || 'Applicants'}</h4>
+                <p className={styles.mutedText}>Applicants: {selectedRoleApplicants.length}</p>
+                <table className={styles.table}>
+                  <thead>
+                    <tr><th>Candidate</th><th>Email</th><th>ATS</th><th>Status</th><th>Action</th></tr>
+                  </thead>
+                  <tbody>
+                    {selectedRoleApplicants.length === 0 ? (
+                      <tr><td colSpan="5" className={styles.empty}>No applicants for this role</td></tr>
+                    ) : selectedRoleApplicants.map((application) => (
+                      <tr key={application.id}>
+                        <td>
+                          <button
+                            type="button"
+                            className={styles.nameLink}
+                            onClick={() => setSelectedApplicantId(application.id)}
+                          >
+                            {getApplicationCandidateName(application)}
+                          </button>
+                        </td>
+                        <td>{application.user_email}</td>
+                        <td>
+                          {atsScores[application.id] ? `${atsScores[application.id].score}%` : 'N/A'}
+                        </td>
+                        <td>{application.status}</td>
+                        <td>
+                          <div className={styles.actionsRow}>
+                            <button type="button" className={styles.btnSuccess} disabled={saving || application.status === 'selected'} onClick={() => withSave(() => managerAPI.updateApplicationStatus(application.id, 'selected'), 'Failed to shortlist')}>Shortlist</button>
+                            <button type="button" className={styles.btnPrimary} disabled={saving} onClick={() => sendTestLink(application)}>Send Test Link</button>
+                            <button type="button" className={styles.btnDanger} disabled={saving || application.status === 'rejected'} onClick={() => withSave(() => managerAPI.updateApplicationStatus(application.id, 'rejected'), 'Failed to reject')}>Reject</button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className={styles.detailsColumn}>
+                <h4>Applicant Details</h4>
+                {!selectedApplicant ? (
+                  <p className={styles.mutedText}>Select a user to view full details</p>
+                ) : (
+                  <>
+                    <div className={styles.detailList}>
+                      {applicantDetailsRows.map((row) => (
+                        <div key={`${selectedApplicant.id}-${row.label}`} className={styles.detailItem}>
+                          <p className={styles.detailLabel}>{row.label}</p>
+                          <p className={styles.detailValue}>{row.value || 'N/A'}</p>
+                        </div>
+                      ))}
                     </div>
-                  ) : 'N/A'}
-                </td>
-                <td>{a.status}</td>
-                <td><div className={styles.actionsRow}>
-                  <button type="button" className={styles.btnSuccess} disabled={saving || a.status === 'selected'} onClick={() => withSave(() => managerAPI.updateApplicationStatus(a.id, 'selected'), 'Failed to shortlist')}>Shortlist</button>
-                  <button type="button" className={styles.btnPrimary} disabled={saving} onClick={() => sendTestLink(a)}>Send Test Link</button>
-                  <button type="button" className={styles.btnDanger} disabled={saving || a.status === 'rejected'} onClick={() => withSave(() => managerAPI.updateApplicationStatus(a.id, 'rejected'), 'Failed to reject')}>Reject</button>
-                </div></td>
-              </tr>
-            ))}</tbody>
-          </table>
+                    {selectedApplicant.user_resume_url ? (
+                      <a href={selectedApplicant.user_resume_url} target="_blank" rel="noreferrer" className={styles.inlineLink}>View Resume</a>
+                    ) : null}
+                    {renderApplicationDetails(selectedApplicant)}
+                  </>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       );
     }

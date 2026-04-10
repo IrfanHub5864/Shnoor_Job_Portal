@@ -884,6 +884,9 @@ const getManagerStats = async (req, res) => {
       }
     });
 
+    const usersClearedTest = testCandidates.size;
+    const usersClearedInterview = interviewCandidates.size;
+
     return res.status(200).json({
       message: 'Manager stats fetched successfully',
       data: {
@@ -891,6 +894,9 @@ const getManagerStats = async (req, res) => {
         totalOpenings: jobs.filter((item) => item.status === 'open').length,
         clearedTests: completedTests.length,
         clearedInterviews: completedInterviews.length,
+        usersClearedTest,
+        usersClearedInterview,
+        usersClearedBoth: clearedBoth,
         clearedBoth,
         offboardingLettersSent: offboardingLetters.filter((item) => item.status === 'sent').length
       }
